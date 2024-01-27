@@ -34,6 +34,9 @@
       }
     },
     "owner": "yougikou",
+    "experiments": {
+      "baseUrl": "/openroutes"
+    },
     "plugins": [
       "expo-router"
     ]
