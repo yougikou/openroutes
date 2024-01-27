@@ -49,25 +49,15 @@ export default function Upload() {
   };
 
   const downloadFile = async (data, filename, mimeType) => {
-    if (Platform.OS === 'web') {
-      const blob = new Blob([data], { type: mimeType });
-      const href = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = href;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(href);
-    } else {
-      try {
-        const fileUri = FileSystem.documentDirectory + filename;
-        const { uri: downloadedUri } = await FileSystem.writeAsStringAsync(fileUri, data, { encoding: FileSystem.EncodingType.UTF8 });
-        await Share.share({ url: downloadedUri });
-      } catch (error) {
-        console.error('下载文件出错:', error);
-      }
-    }
+    const blob = new Blob([data], { type: mimeType });
+    const href = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = href;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(href);
   };
 
   const handleDownload = (fileType) => {
