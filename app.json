@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "open-routes",
+    "slug": "open-routes",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e1f82533-f36a-4821-b4f3-45b850ef72b0"
+      }
+    },
+    "owner": "yougikou",
+    "plugins": [
+      "expo-router"
+    ]
+  },
+  "scheme": "hikroute"
+}
