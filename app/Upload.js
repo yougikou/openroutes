@@ -1,19 +1,24 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Button, Platform, Share } from 'react-native';
+import { StyleSheet, Text, View, Button } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
 import toGeoJSON from '@mapbox/togeojson';
 import tokml from 'geojson-to-kml';
+import i18n from '../components/i18n/i18n';
 
 export default function Upload() {
   const [geojsonData, setGeojsonData] = useState(null);
   const [originalFileName, setOriginalFileName] = useState(null);
+  const [fileInfo, setFileInfo] = useState('');
   const styles = StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: '#fff',
       alignItems: 'center',
       justifyContent: 'space-around',
+    },
+    fileInfo: {
+      margin: 10,
+      fontSize: 16,
     },
   });
 
@@ -28,6 +33,7 @@ export default function Upload() {
         const fileUri = res.assets[0].uri;
         const fileName = res.assets[0].name;
         setOriginalFileName(fileName.split('.').slice(0, -1).join('.'));
+        setFileInfo(`文件名: ${res.assets[0].name}\n大小: ${res.assets[0].size} bytes`);
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -42,6 +48,8 @@ export default function Upload() {
           setGeojsonData(convertedData);
         };
         reader.readAsText(res.assets[0].file);
+      } else {
+        setFileInfo('');
       }
     } catch (err) {
       console.error(err);
@@ -88,9 +96,10 @@ export default function Upload() {
 
   return (
     <View style={styles.container}>
-        <Button title="上传 GPX/KML 文件" onPress={pickFile} />
-        <Button title="下载 GEOJSON 文件" onPress={() => handleDownload('geojson')} disabled={!geojsonData} />
-        <Button title="下载 KML 文件" onPress={() => handleDownload('kml')} disabled={!geojsonData} />
+        <Button title={ i18n.t('upload_upload_file') } onPress={pickFile} />
+        <Text style={styles.fileInfo}>{fileInfo}</Text>
+        <Button title={ i18n.t('upload_download_geojsonfile') }  onPress={() => handleDownload('geojson')} disabled={!geojsonData} />
+        <Button title={ i18n.t('upload_download_kmlfile') }  onPress={() => handleDownload('kml')} disabled={!geojsonData} />
     </View>
   );
 };

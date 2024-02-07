@@ -1,10 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { Redirect } from 'expo-router';
 
-export default function Routes() {
+export default function _() {
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Routes Information</Text>
-    </View>
+    <Redirect href="/Routes" />
   );
 }
