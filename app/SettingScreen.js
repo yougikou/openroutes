@@ -1,16 +1,22 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Appbar, Card, Title, Paragraph, Avatar, Chip, Searchbar, Button as PaperButton, BottomNavigation } from 'react-native-paper';
+import { View, StyleSheet } from 'react-native';
+import { Appbar, List } from 'react-native-paper';
+import i18n from '../components/i18n/i18n';
 
 export default function SettingScreen() {
   return (
     <View style={styles.container}>
-      <Appbar.Header>
-        <Appbar.Content title="Settings" />
-        <Appbar.Action icon="calendar" onPress={() => {}} />
-        <Appbar.Action icon="magnify" onPress={() => {}} />
+      <Appbar.Header elevation={2}>
+        <Appbar.Content title={i18n.t('title_setting')} />
       </Appbar.Header>
-      <Text>Setting Information</Text>
+      <List.Section>
+        <List.Subheader>{i18n.t('setting_account')}</List.Subheader>
+        <List.Item
+          left={(props) => <List.Icon {...props} icon="github" />}
+          title={i18n.t('setting_github_oauth')}
+          onPress={() => {}}
+        />
+      </List.Section>
     </View>
   );
 }

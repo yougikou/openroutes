@@ -1,90 +1,87 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, ScrollView, Image, Button } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, View, Text, TextInput, ScrollView, Image, Button, Pressable, LayoutAnimation } from 'react-native';
+import { FlashList } from "@shopify/flash-list";
 import { useNavigation } from '@react-navigation/native';
 import { Appbar, Card, Title, Paragraph, Avatar, Chip, Searchbar, Button as PaperButton, BottomNavigation } from 'react-native-paper';
-
-const data = [
-  {
-    id: 1,
-    name: '登山线路一',
-    description: '这是一条难度较高的登山线路，适合经验丰富的登山爱好者。',
-    image: 'https://picsum.photos/200/300',
-    difficulty: '困难',
-    distance: '10公里',
-    duration: '5小时',
-  },
-  {
-    id: 2,
-    name: '骑行线路二',
-    description: '这是一条风景优美的骑行线路，适合喜欢骑行观光的爱好者。',
-    image: 'https://picsum.photos/200/300',
-    difficulty: '中等',
-    distance: '20公里',
-    duration: '3小时',
-  },
-  {
-    id: 3,
-    name: '远足线路三',
-    description: '这是一条轻松的远足线路，适合家庭出游。',
-    image: 'https://picsum.photos/200/300',
-    difficulty: '简单',
-    distance: '5公里',
-    duration: '2小时',
-  },
-];
+import i18n from '../components/i18n/i18n';
+import { fetchIssues } from '../components/GitHubAPI';
 
 export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
-  const navigation = useNavigation();
+  const [issues, setIssues] = useState([]);
+  const page = 1;
+  const filters = {
+    state: 'all',
+  };
 
   const handleSearch = () => {
-    // 搜索逻辑
   };
 
   const handleToDetail = () => {
-    navigation.navigate('Detail');
   };
 
-  const handleToShare = () => {
-    navigation.navigate('Share');
+  const list = useRef(null);
+
+  const renderItem = ({ item }) => {
+    return (
+      <Pressable onPress={() => {}}>
+        <Card style={styles.card}  mode="elevated" key={item.id} elevation={2}>
+          <Card.Cover source={{ uri: item.attach_files.find(file => file.type === 'img').uri }} />
+          <Card.Title title={item.title} left={() => <Avatar.Image size={32} source={{ uri: item.avatar }} />} />
+          <Card.Content>
+            <View style={styles.row}>
+              <Chip style={styles.chip} icon="map-marker-distance">{item.distance}{i18n.t('home_unit_km')}</Chip>
+              <Chip style={styles.chip} icon="clock">{item.duration}</Chip>
+              {item.labels.map(label => (<Chip key={label.name} style={styles.chip}>{i18n.t(label.name, { defaultValue: label.name })}</Chip>))}
+            </View>
+          </Card.Content>
+          <Card.Actions>
+            <PaperButton onPress={handleToDetail}>{ i18n.t('home_detail') }</PaperButton>
+          </Card.Actions>
+        </Card>
+      </Pressable>
+    );
   };
 
-  const handleToSettings = () => {
-    navigation.navigate('Settings');
-  };
+  useEffect(() => {
+    const owner = 'yougikou';
+    const repo = 'yougikou.github.io';
+    const perPage = 10;
+
+    const loadIssues = async () => {
+      try {
+        const issuesData = await fetchIssues(owner, repo, page, perPage, filters);
+        console.log(issuesData);
+        setIssues(issuesData);
+      } catch (error) {
+        console.error("Error fetching issues:", error);
+      }
+    };
+  
+    loadIssues();
+  }, []);
 
   return (
     <View style={styles.container}>
-      <Appbar.Header>
-        <Appbar.Content title="Explore Routes" />
-        <Appbar.Action icon="calendar" onPress={() => {}} />
-        <Appbar.Action icon="magnify" onPress={() => {}} />
+      <Appbar.Header elevation={2}>
+        <Appbar.Content title={ i18n.t('title_explore') } />
+        <Appbar.Action icon="earth" onPress={() => {}} />
       </Appbar.Header>
       <View>
-        <Searchbar style={styles.searchbar}
-          placeholder="Search"
+        <Searchbar style={styles.searchbar} mode='bar' elevation={2}
+          placeholder={ i18n.t('home_search') }
           onChangeText={setSearchQuery}
           value={searchQuery}
         />
       </View>
       <ScrollView>
-        {
-          // 线路卡片列表
-          data.map(item => (
-            <Card style={styles.card}  mode="elevated" key={item.id}>
-              <Card.Cover source={{ uri: item.image }} />
-              <Card.Title title={item.name} left={() => <Avatar.Image size={32} source={{ uri: item.avatar }} />} />
-              <Card.Content>
-                <Paragraph>{item.description}</Paragraph>
-                <Chip style={styles.chip} icon="map-marker">距离：{item.distance}</Chip>
-                <Chip style={styles.chip} icon="clock">时长：{item.duration}</Chip>
-              </Card.Content>
-              <Card.Actions>
-                <PaperButton onPress={handleToDetail}>详细</PaperButton>
-              </Card.Actions>
-            </Card>
-          ))
-        }
+        <FlashList
+          ref={list}
+          keyExtractor={(item) => (item.id)}
+          renderItem={renderItem}
+          estimatedItemSize={100}
+          data={issues}
+        />
       </ScrollView>
     </View>
   );
@@ -106,13 +103,24 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   searchbar: {
-    margin: 10,
+    marginTop: 10,
+    marginBottom: 5,
+    marginLeft: 10,
+    marginRight: 10,
   },
   searchbarText: {
     fontSize: 16,
   },
   card: {
-    margin: 4
+    marginTop: 5,
+    marginBottom: 5,
+    marginLeft: 10,
+    marginRight: 10,
+  },
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 12,
   },
   chip: {
     margin: 3

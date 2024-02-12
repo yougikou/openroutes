@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, ScrollView, Alert } from 'react-native';
+import { Image } from 'expo-image';
 import * as DocumentPicker from 'expo-document-picker';
-import { Appbar, TextInput, Chip, Menu, Text, SegmentedButtons, Button, PaperProvider } from 'react-native-paper';
+import * as ImagePicker from "expo-image-picker";
+import { Appbar, TextInput, Chip, Menu, SegmentedButtons, Button, Surface } from 'react-native-paper';
 import toGeoJSON from '@mapbox/togeojson';
 import tokml from 'geojson-to-kml';
 import i18n from '../components/i18n/i18n';
+import { uploadFile } from "../components/GitHubAPI";
 
 export default function ShareScreen() {
   const [geojsonData, setGeojsonData] = useState(null);
   const [originalFileName, setOriginalFileName] = useState(null);
   const [fileInfo, setFileInfo] = useState('');
+
+  const [imgFile, setImgFile] = useState(null); 
 
   const [routeType, setRouteType] = React.useState('hiking');
   const [routeDate, setRouteDate] = React.useState('');
@@ -56,6 +61,23 @@ export default function ShareScreen() {
     }
   };
 
+  const pickImage = async () => { 
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync(); 
+
+    if (status !== "granted") { 
+        Alert.alert( 
+            "Permission Denied", 
+            `Sorry, we need camera  
+             roll permission to upload images.` 
+        ); 
+    } else { 
+        const result = await ImagePicker.launchImageLibraryAsync(); 
+        if (!result.cancelled) { 
+            setImgFile(result.assets[0].uri); 
+        } 
+    } 
+}; 
+
   const downloadFile = async (data, filename, mimeType) => {
     const blob = new Blob([data], { type: mimeType });
     const href = URL.createObjectURL(blob);
@@ -94,41 +116,59 @@ export default function ShareScreen() {
     downloadFile(data, filename, mimeType);
   };
 
+  const handleSubmit = async (data) => {
+    const fileBlob = new Blob([JSON.stringify(data)], { type: '	image/png' });
+    uploadFile(fileBlob, "geojson");
+  }
+
   return (
-    <PaperProvider>
-      <View style={styles.container}>
-        <Appbar.Header>
-          <Appbar.Content title={ i18n.t('title_share') } />
-          <Menu
-            visible={menuVisible}
-            onDismiss={closeMenu}
-            anchor={<Appbar.Action icon="menu" onPress={openMenu} />}>
-            <Menu.Item onPress={() => handleDownload('geojson')} title={ i18n.t('share_download_geojsonfile') } disabled={!geojsonData} />
-            <Menu.Item onPress={() => handleDownload('kml')} title={ i18n.t('share_download_kmlfile') } disabled={!geojsonData} />
-          </Menu>
-        </Appbar.Header>
-        <View>
-          <Button style={styles.inputWidget} icon="routes" mode="elevated" onPress={pickFile}>
-            { i18n.t('share_upload_file') }
-          </Button>
-          <Chip style={styles.inputWidget} icon="file" compact="true">{ fileInfo }</Chip>
-          <TextInput style={styles.inputWidget} mode="outlined" label="Record Date" value={routeDate} editable={routeDate.length === 0}/>
-          <TextInput style={styles.inputWidget} mode="outlined" label="Course Name" right={<TextInput.Affix text="/50" />} />
-          <View style={styles.inputWidget}>
-            <TextInput style={styles.textArea} mode="outlined" label="Course Description" multiline />
-          </View>
-          <SegmentedButtons style={styles.inputWidget}
-              value={routeType}
-              onValueChange={setRouteType}
-              buttons={[
-                { value: 'hiking', label: 'Hiking'},
-                { value: 'walking', label: 'Walking'},
-                { value: 'cycling', label: 'Cycling'},
-              ]}
-            />
+    <View style={styles.container}>
+      <Appbar.Header elevation={2}>
+        <Appbar.Content title={i18n.t('title_share')} />
+        <Menu
+          visible={menuVisible}
+          onDismiss={closeMenu}
+          anchor={<Appbar.Action icon="menu" onPress={openMenu} />}>
+          <Menu.Item onPress={() => handleDownload('geojson')} title={i18n.t('share_download_geojsonfile')} disabled={!geojsonData} />
+          <Menu.Item onPress={() => handleDownload('kml')} title={i18n.t('share_download_kmlfile')} disabled={!geojsonData} />
+        </Menu>
+      </Appbar.Header>
+      <ScrollView>
+        <Button style={styles.fileButton} icon="routes" mode="elevated" onPress={pickFile}>
+          {i18n.t('share_upload_file')}
+        </Button>
+        <Chip style={styles.inputWidget} icon="file" compact="true">{fileInfo}</Chip>
+        <TextInput style={styles.inputWidget} mode="outlined"
+          label={i18n.t('share_record_date')} value={routeDate} editable={routeDate.length === 0}/>
+        <TextInput style={styles.inputWidget} mode="outlined" 
+          label={i18n.t('share_course_name')} right={<TextInput.Affix text="/50" />} />
+        <SegmentedButtons style={styles.inputWidget}
+          value={routeType}
+          onValueChange={setRouteType}
+          buttons={[
+            { value: 'hiking', label: i18n.t('hiking')},
+            { value: 'walking', label: i18n.t('walking')},
+            { value: 'cycling', label: i18n.t('cycling')},
+          ]}
+        />
+        <View style={styles.inputWidget}> 
+          <Surface style={styles.surface} elevation={1}>
+            <View style={styles.image}> 
+              {imgFile ? ( 
+                <Image style={styles.image} source={{ uri: imgFile }} /> 
+              ) : (<></>)} 
+              <Button style={styles.imageButton} icon="camera" onPress={pickImage}>{i18n.t('share_upload_img')}</Button>
+            </View> 
+          </Surface>
         </View>
-      </View>
-    </PaperProvider>
+        <View style={styles.inputWidget}>
+          <TextInput style={styles.textArea} mode="outlined" label={i18n.t('share_course_desc')} multiline />
+        </View>
+        <Button style={styles.submitButton} icon="routes" mode="elevated" onPress={() => handleSubmit(geojsonData)} disabled={!geojsonData}>
+          {i18n.t('share_submit')}
+        </Button>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -145,9 +185,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   inputWidget: {
-    margin: '3px'
+    marginTop: 3,
+    marginBottom: 3,
+    marginLeft: 10,
+    marginRight: 10,
   },
   textArea: {
-    height: 300
+    height: 200
+  },
+  image: { 
+    width: 100, 
+    height: 100
+  },
+  fileButton: {
+    marginTop: 10,
+    marginBottom: 3,
+    marginLeft: 10,
+    marginRight: 10,
+  },
+  submitButton: {
+    marginTop: 3,
+    marginBottom: 10,
+    marginLeft: 10,
+    marginRight: 10,
+  },
+  imageButton: { 
+    width: 100, 
+    height: 100, 
+    borderRadius: 10,
+    position: 'absolute',
+    top: 30,
+  },
+  errorText: { 
+    color: "red", 
+    marginTop: 16, 
+  }, 
+  surface: {
+    padding: 8,
+    height: 100,
+    width: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin:3
   },
 });
