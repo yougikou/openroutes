@@ -41,5 +41,6 @@
       "expo-router"
     ]
   },
-  "scheme": "oproutes"
+  "scheme": "oproutes",
+  "platforms": ["ios", "android", "web"]
 }

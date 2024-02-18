@@ -13,6 +13,7 @@
   "dependencies": {
     "@expo/webpack-config": "~19.0.1",
     "@mapbox/togeojson": "^0.16.2",
+    "@react-native-async-storage/async-storage": "1.21.0",
     "@react-native-picker/picker": "^2.6.1",
     "@react-navigation/bottom-tabs": "^6.5.11",
     "@react-navigation/drawer": "^6.6.6",
@@ -20,6 +21,7 @@
     "@react-navigation/stack": "^6.3.20",
     "@shopify/flash-list": "1.6.3",
     "expo": "^50.0.4",
+    "expo-auth-session": "~5.4.0",
     "expo-constants": "~15.4.5",
     "expo-document-picker": "~11.10.1",
     "expo-image": "~1.10.6",

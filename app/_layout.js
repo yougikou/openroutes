@@ -1,10 +1,17 @@
 // App.js
-import React from 'react';
+import React, { useEffect } from 'react';
+import { Linking } from 'react-native';
+import { CommonActions } from '@react-navigation/native';
+import { NavigationContainer, useLinkTo } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from './HomeScreen';
 import ShareScreen from './ShareScreen';
 import SettingScreen from './SettingScreen';
+import GithubAuthScreen from "./GithubAuthScreen";
 import { MD3LightTheme as DefaultTheme, PaperProvider, BottomNavigation } from 'react-native-paper';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import i18n from '../components/i18n/i18n';
+import { storeData } from "../components/StorageAPI";
 
 const theme = {
   ...DefaultTheme,
@@ -55,27 +62,117 @@ const theme = {
   }
 };
 
-function App() {
-  const [index, setIndex] = React.useState(0);
-  const [routes] = React.useState([
-    { key: 'home', title: i18n.t('bottom_explore'), focusedIcon: 'map-search', unfocusedIcon: 'map-search-outline' },
-    { key: 'share', title: i18n.t('bottom_share'), focusedIcon: 'cloud-upload', unfocusedIcon: 'map-search-outline' },
-    { key: 'setting', title: i18n.t('bottom_setting'), focusedIcon: 'cog', unfocusedIcon: 'cog-outline' }
-  ]);
+const Tab = createBottomTabNavigator();
 
-  const renderScene = BottomNavigation.SceneMap({
-    home: HomeScreen,
-    share: ShareScreen,
-    setting: SettingScreen,
-  });
+const linking = {
+  prefixes: ['oproutes://', 'http://localhost:8081/'],
+  config: {
+    screens: {
+      Home: 'home',
+      Share: 'share',
+      Setting: 'setting',
+      GithubAuth: 'githubauth',
+    }
+  },
+};
+
+const MyTabs = () => {
+  return (
+    <Tab.Navigator
+      screenOptions={{ headerShown: false }}
+      tabBar={({ navigation, state, descriptors, insets }) => {
+        const filteredRoutes = state.routes.filter(route => route.name !== "GithubAuth");
+        const filteredState = {
+          ...state,
+          routes: filteredRoutes,
+          index: state.index >= filteredRoutes.length ? filteredRoutes.length - 1 : state.index,
+        };
+        return (
+          <BottomNavigation.Bar navigationState={filteredState} safeAreaInsets={insets}
+            onTabPress={({ route, preventDefault }) => {
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              });
+
+              if (event.defaultPrevented) {
+                preventDefault();
+              } else {
+                navigation.dispatch({
+                  ...CommonActions.navigate(route.name, route.params),
+                  target: state.key,
+                });
+              }
+            }}
+
+            renderIcon={({ route, focused, color }) => {
+              const { options } = descriptors[route.key];
+              if (options.tabBarIcon) {
+                return options.tabBarIcon({ focused, color, size: 24 });
+              }
+              return null;
+            }}
+
+            getLabelText={({ route }) => {
+              const { options } = descriptors[route.key];
+              const label =
+                options.tabBarLabel !== undefined
+                  ? options.tabBarLabel
+                  : options.title !== undefined
+                  ? options.title
+                  : route.title;
+              return label;
+            }}
+          />
+        )
+      }}
+    >
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{
+          tabBarLabel: i18n.t('bottom_explore'),
+          tabBarIcon: ({ color, size }) => {
+            return <Icon name="map-search" size={size} color={color} />;
+          },
+        }}
+      />
+      <Tab.Screen
+        name="Share"
+        component={ShareScreen}
+        options={{
+          tabBarLabel: i18n.t('bottom_share'),
+          tabBarIcon: ({ color, size }) => {
+            return <Icon name="cloud-upload" size={size} color={color} />;
+          },
+        }}
+      />
+      <Tab.Screen
+        name="Setting"
+        component={SettingScreen}
+        options={{
+          tabBarLabel: i18n.t('bottom_setting'),
+          tabBarIcon: ({ color, size }) => {
+            return <Icon name="cog" size={size} color={color} />;
+          },
+        }}
+      />
+      <Tab.Screen
+        name="GithubAuth"
+        component={GithubAuthScreen}
+      />
+    </Tab.Navigator>
+  );
+}
+
+function App() {
 
   return (
     <PaperProvider theme={theme}>
-      <BottomNavigation
-        navigationState={{ index, routes }}
-        onIndexChange={setIndex}
-        renderScene={renderScene}
-      />
+      <NavigationContainer independent={true} linking={linking}>
+        <MyTabs />
+      </NavigationContainer>
     </PaperProvider>
   );
 }

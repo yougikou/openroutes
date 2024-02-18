@@ -1,4 +1,5 @@
 import yaml from 'js-yaml';
+import { storeData } from "./StorageAPI";
 
 const mockData = [
   {
@@ -201,33 +202,80 @@ const createIssue = async (owner, repo, title, body, token) => {
   return issueData;
 }
 
-const uploadFile = async (fileBlob, fileName) => {
-  const clientId = "d429872aeaa174c",
-            auth = "Client-ID " + clientId;
-  // const clientSecret = "1d6d7409b6735aa00bc269fcfde8b255f65bb177"
-  // 转换GeoJSON对象为Blob
-  // const geoJsonBlob = new Blob([JSON.stringify(geoJsonData)], { type: 'application/json' });
-  const formData = new FormData();
-  formData.append('file', fileBlob, fileName);
+const exchangeToken = async (cd) => {
+  const ci = 'cd019fec05aa5b74ad81';
+  const sc = '51d66fda4e5184bcc7a4ceaf99f78a8cf3acb028';
+  const ru = 'http://localhost:8081/githubauth';
+  const proxyUrl = 'https://cors-anywhere.azm.workers.dev/';
 
-  // 上传文件
   try {
-    const response = await fetch('https://api.imgur.com/3/image/', {
+    const response = await fetch(proxyUrl + 'https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json'
+      },
+      body: `client_id=${ci}&client_secret=${sc}&code=${cd}&redirect_uri=${ru}`,
+    });
+
+    const data = await response.json();
+    if (data.access_token) {
+      storeData("github_access_token", data.access_token)
+    } else {
+      console.error('No access token found in response:', textResponse);
+    }
+  } catch (error) {
+    console.error('Token exchange error:', error);
+  }
+}
+
+
+const uploadGeoJsonFile = async (geoJsonData, key) => {
+  const geoJsonBlob = new Blob([JSON.stringify(geoJsonData)], { type: 'application/json' });
+  return uploadToFileIO(geoJsonBlob, `${key}_geojson.json`);
+}
+
+const uploadImgFile = async (base64Data, key) => {
+  return uploadImgToImgur(base64Data);
+}
+
+
+async function uploadToFileIO(fileBlob, fileName) {
+  try {  
+    const formData = new FormData();
+    formData.append('file', fileBlob, fileName)
+    formData.append('expires', '1d');
+    formData.append('maxDownloads', '1');
+    formData.append('autoDelete', 'true');
+    const response = await fetch(`https://file.io/`, {
       method: 'POST',
       body: formData,
-      headers: {
-        Authorization: auth,
-        Accept: "application/json",
-      },
     });
-    const data = await response.json();
-    
-    console.log(data);
-    return data; // 返回上传后的数据
+    const resJson = await response.json();
+    return resJson.link
   } catch (error) {
-    console.error('Error uploading GeoJSON:', error);
+    console.error('Error uploading file:', error);
     throw error;
   }
 }
 
-export { fetchIssues, createIssue, uploadFile };
+async function uploadImgToImgur(base64Data) {
+  const formData = new FormData();
+  formData.append('image', base64Data);
+
+  const response = await fetch('https://api.imgur.com/3/image', {
+    method: 'POST',
+    headers: {
+      Authorization: "Client-ID d429872aeaa174c",
+      Accept: "application/json",
+    },
+    body: formData,
+  });
+
+  const data = await response.json();
+    
+  console.log(data);
+  return data;
+}
+
+export { fetchIssues, createIssue, exchangeToken, uploadGeoJsonFile, uploadImgFile };

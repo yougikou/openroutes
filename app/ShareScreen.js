@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, ScrollView, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import * as DocumentPicker from 'expo-document-picker';
@@ -7,17 +7,18 @@ import { Appbar, TextInput, Chip, Menu, SegmentedButtons, Button, Surface } from
 import toGeoJSON from '@mapbox/togeojson';
 import tokml from 'geojson-to-kml';
 import i18n from '../components/i18n/i18n';
-import { uploadFile } from "../components/GitHubAPI";
+import { createIssue, uploadImgFile, uploadGeoJsonFile } from "../components/GitHubAPI";
+import { readData } from "../components/StorageAPI";
 
 export default function ShareScreen() {
   const [geojsonData, setGeojsonData] = useState(null);
   const [originalFileName, setOriginalFileName] = useState(null);
   const [fileInfo, setFileInfo] = useState('');
-
-  const [imgFile, setImgFile] = useState(null); 
-
+  const [imgUri, setImgUri] = useState(null);
+  const [githubToken, setGithubToken] = useState(null);
   const [routeType, setRouteType] = React.useState('hiking');
   const [routeDate, setRouteDate] = React.useState('');
+  const [routeName, setRouteName] = React.useState('');
   const [menuVisible, setMenuVisible] = React.useState(false);
   const openMenu = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
@@ -50,7 +51,6 @@ export default function ShareScreen() {
             setRouteDate(match[0]);
           }
           setGeojsonData(convertedData);
-
         };
         reader.readAsText(res.assets[0].file);
       } else {
@@ -73,7 +73,7 @@ export default function ShareScreen() {
     } else { 
         const result = await ImagePicker.launchImageLibraryAsync(); 
         if (!result.cancelled) { 
-            setImgFile(result.assets[0].uri); 
+          setImgUri(result.assets[0].uri);
         } 
     } 
 }; 
@@ -116,10 +116,33 @@ export default function ShareScreen() {
     downloadFile(data, filename, mimeType);
   };
 
-  const handleSubmit = async (data) => {
-    const fileBlob = new Blob([JSON.stringify(data)], { type: '	image/png' });
-    uploadFile(fileBlob, "geojson");
+  const handleSubmit = async (imgDataUri, jsonData) => {
+    const parts = imgDataUri.split(';');
+    if (parts.length !== 2) {
+      throw new Error('Invalid Image File');
+    }
+
+    const subparts = parts[1].split(',');
+    if (subparts.length !== 2) {
+      throw new Error('Invalid Image File');
+    }
+    const base64Data = subparts[1];
+    createIssue("yougikou", "yougikou.github.io", )
+    uploadImgFile(base64Data, "geojson");
+    uploadGeoJsonFile(jsonData, "geojson");
   }
+
+  useEffect(() => {
+    const fetchToken = async () => {
+      const token = await readData('github_access_token');
+      console.log("github access token: " + token);
+      if (token) {
+        setGithubToken(token);
+      }
+    };
+
+    fetchToken();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -137,11 +160,18 @@ export default function ShareScreen() {
         <Button style={styles.fileButton} icon="routes" mode="elevated" onPress={pickFile}>
           {i18n.t('share_upload_file')}
         </Button>
-        <Chip style={styles.inputWidget} icon="file" compact="true">{fileInfo}</Chip>
+        <Chip style={styles.inputWidget} icon="file" compact="true">
+          {fileInfo}
+          { (geojsonData && !githubToken) && 
+            <><br/>You can only covert file with menu.
+              <br/>Github Token is required for creating.
+              <br/>Go to setting to authrize with your github account first.</>
+          }
+        </Chip>
         <TextInput style={styles.inputWidget} mode="outlined"
-          label={i18n.t('share_record_date')} value={routeDate} editable={routeDate.length === 0}/>
+          label={i18n.t('share_record_date')} value={routeDate} readOnly={routeDate.length > 0}/>
         <TextInput style={styles.inputWidget} mode="outlined" 
-          label={i18n.t('share_course_name')} right={<TextInput.Affix text="/50" />} />
+          label={i18n.t('share_course_name')} value={routeName} right={<TextInput.Affix text="/50" />} />
         <SegmentedButtons style={styles.inputWidget}
           value={routeType}
           onValueChange={setRouteType}
@@ -154,8 +184,8 @@ export default function ShareScreen() {
         <View style={styles.inputWidget}> 
           <Surface style={styles.surface} elevation={1}>
             <View style={styles.image}> 
-              {imgFile ? ( 
-                <Image style={styles.image} source={{ uri: imgFile }} /> 
+              {imgUri ? ( 
+                <Image style={styles.image} source={{ uri: imgUri }} /> 
               ) : (<></>)} 
               <Button style={styles.imageButton} icon="camera" onPress={pickImage}>{i18n.t('share_upload_img')}</Button>
             </View> 
@@ -164,7 +194,7 @@ export default function ShareScreen() {
         <View style={styles.inputWidget}>
           <TextInput style={styles.textArea} mode="outlined" label={i18n.t('share_course_desc')} multiline />
         </View>
-        <Button style={styles.submitButton} icon="routes" mode="elevated" onPress={() => handleSubmit(geojsonData)} disabled={!geojsonData}>
+        <Button style={styles.submitButton} icon="routes" mode="elevated" onPress={() => handleSubmit(imgUri, geojsonData)} disabled={!geojsonData || !githubToken}>
           {i18n.t('share_submit')}
         </Button>
       </ScrollView>
