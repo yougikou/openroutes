@@ -44,13 +44,11 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    const owner = 'yougikou';
-    const repo = 'yougikou.github.io';
     const perPage = 10;
 
     const loadIssues = async () => {
       try {
-        const issuesData = await fetchIssues(owner, repo, page, perPage, filters);
+        const issuesData = await fetchIssues(page, perPage, filters);
         console.log(issuesData);
         setIssues(issuesData);
       } catch (error) {

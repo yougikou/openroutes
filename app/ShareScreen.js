@@ -16,9 +16,22 @@ export default function ShareScreen() {
   const [fileInfo, setFileInfo] = useState('');
   const [imgUri, setImgUri] = useState(null);
   const [githubToken, setGithubToken] = useState(null);
-  const [routeType, setRouteType] = React.useState('hiking');
-  const [routeDate, setRouteDate] = React.useState('');
-  const [routeName, setRouteName] = React.useState('');
+  const [routeData, setRouteData] = React.useState({
+    name: '',
+    type: 'hiking',
+    date: '',
+    description: '',
+    coverimg: '',
+    geojson: '',
+  });
+
+  const updateRouteData = (key, value) => {
+    setRouteData((prevRouteData) => ({
+      ...prevRouteData,
+      [key]: value,
+    }));
+  };
+
   const [menuVisible, setMenuVisible] = React.useState(false);
   const openMenu = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
@@ -48,7 +61,7 @@ export default function ShareScreen() {
           }
           const match = /\d{4}-\d{2}-\d{2}/.exec(JSON.stringify(convertedData));
           if (match != null && match.length > 0) {
-            setRouteDate(match[0]);
+            updateRouteData('date', match[0]);
           }
           setGeojsonData(convertedData);
         };
@@ -127,9 +140,25 @@ export default function ShareScreen() {
       throw new Error('Invalid Image File');
     }
     const base64Data = subparts[1];
-    createIssue("yougikou", "yougikou.github.io", )
-    uploadImgFile(base64Data, "geojson");
-    uploadGeoJsonFile(jsonData, "geojson");
+
+    const imgURL = await uploadImgFile(base64Data);
+    const jsonURL = await uploadGeoJsonFile(jsonData);
+    setRouteData((prevRouteData) => ({
+      ...prevRouteData,
+      coverimg: imgURL,
+      geojson: jsonURL,
+    }));
+
+    createIssue({ ...routeData, coverimg: imgURL, geojson: jsonURL }, githubToken)
+    // const mockRouteData = {
+    //   "name": " 大仏ハイキングルート",
+    //   "type": "hiking",
+    //   "date": "2013-05-04",
+    //   "description": " 大仏ハイキングルート",
+    //   "coverimg": "https://i.imgur.com/wzH7Itf.jpg",
+    //   "geojson": "https://file.io/YKmac8Oqzxwf"
+    // }
+    // createIssue(mockRouteData, githubToken)
   }
 
   useEffect(() => {
@@ -169,12 +198,14 @@ export default function ShareScreen() {
           }
         </Chip>
         <TextInput style={styles.inputWidget} mode="outlined"
-          label={i18n.t('share_record_date')} value={routeDate} readOnly={routeDate.length > 0}/>
+          label={i18n.t('share_record_date')} value={routeData.date} 
+          onChangeText={(value) => updateRouteData('date', value)} />
         <TextInput style={styles.inputWidget} mode="outlined" 
-          label={i18n.t('share_course_name')} value={routeName} right={<TextInput.Affix text="/50" />} />
+          label={i18n.t('share_course_name')} value={routeData.name}
+          onChangeText={(value) => updateRouteData('name', value)} right={<TextInput.Affix text="/50" />} />
         <SegmentedButtons style={styles.inputWidget}
-          value={routeType}
-          onValueChange={setRouteType}
+          value={routeData.type}
+          onValueChange={(value) => updateRouteData('type', value)}
           buttons={[
             { value: 'hiking', label: i18n.t('hiking')},
             { value: 'walking', label: i18n.t('walking')},
@@ -192,7 +223,9 @@ export default function ShareScreen() {
           </Surface>
         </View>
         <View style={styles.inputWidget}>
-          <TextInput style={styles.textArea} mode="outlined" label={i18n.t('share_course_desc')} multiline />
+          <TextInput style={styles.textArea} mode="outlined" 
+            label={i18n.t('share_course_desc')} value={routeData.description}
+            onChangeText={(value) => updateRouteData('description', value)} multiline />
         </View>
         <Button style={styles.submitButton} icon="routes" mode="elevated" onPress={() => handleSubmit(imgUri, geojsonData)} disabled={!geojsonData || !githubToken}>
           {i18n.t('share_submit')}

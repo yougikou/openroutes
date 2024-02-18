@@ -116,11 +116,8 @@ const parseYaml = (yamlString) => {
   }
 };
 
-const fetchIssues = async (owner, repo, page = 1, perPage = 10, filters = {}) => {
-  // 构建请求的URL，包括筛选条件
-  let url = `https://api.github.com/repos/${owner}/${repo}/issues?page=${page}&per_page=${perPage}`;
-
-  // 将filters对象中的筛选条件添加到URL中
+const fetchIssues = async (page = 1, perPage = 10, filters = {}) => {
+  let url = `https://api.github.com/repos/${process.env.EXPO_PUBLIC_GITHUB_OWNER}/${process.env.EXPO_PUBLIC_GITHUB_REPO}/issues?page=${page}&per_page=${perPage}`;
   Object.keys(filters).forEach(key => {
     url += `&${key}=${filters[key]}`;
   });
@@ -133,7 +130,6 @@ const fetchIssues = async (owner, repo, page = 1, perPage = 10, filters = {}) =>
     // const rawData = await response.json();
     const rawData = mockData;
 
-    // 处理数据，只保留需要的字段
     const processedData = rawData.map(issue => {
       const bodyObj = yaml.load(issue.body);
       return {
@@ -178,28 +174,38 @@ const fetchIssues = async (owner, repo, page = 1, perPage = 10, filters = {}) =>
     return processedData;
   } catch (error) {
     console.error("Failed to fetch issues from GitHub:", error);
-    throw error; // 将错误向上抛出，允许调用者处理错误
+    throw error;
   }
 };
 
-const createIssue = async (owner, repo, title, body, token) => {
-  const url = `https://api.github.com/repos/${owner}/${repo}/issues`;
+const createIssue = async (routeData, token) => {
+  routeData.coverimg = `![img](${routeData.coverimg})`;
+  routeData.geojson = `[file](${routeData.geojson})`;
+
+  const issueData = {
+    title: `${routeData.date} ${routeData.name}`,
+    body: yaml.dump(routeData),
+    labels: [routeData.type, "route"]
+  };
+
+  const url = `https://api.github.com/repos/${process.env.EXPO_PUBLIC_GITHUB_OWNER}/${process.env.EXPO_PUBLIC_GITHUB_REPO}/issues`;
   const response = await fetch(url, {
     method: 'POST',
     headers: {
+      'Content-Type': 'application/json',
       'Authorization': `token ${token}`,
       'Accept': 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ title, body })
+    body: JSON.stringify(issueData)
   });
 
-  if (!response.ok) {
-    throw new Error(`Error: ${response.status}`);
-  }
+  // if (!response.ok) {
+  //   throw new Error(`Error: ${response.status}`);
+  // }
 
-  const issueData = await response.json();
-  return issueData;
+  const resJson = await response.json();
+  console.log('Issue created:', resJson);
+  return resJson;
 }
 
 const exchangeToken = async (cd) => {
@@ -230,18 +236,17 @@ const exchangeToken = async (cd) => {
 }
 
 
-const uploadGeoJsonFile = async (geoJsonData, key) => {
+const uploadGeoJsonFile = async (geoJsonData) => {
   const geoJsonBlob = new Blob([JSON.stringify(geoJsonData)], { type: 'application/json' });
-  return uploadToFileIO(geoJsonBlob, `${key}_geojson.json`);
+  return await uploadToFileIO(geoJsonBlob, 'geojson.json');
 }
 
-const uploadImgFile = async (base64Data, key) => {
-  return uploadImgToImgur(base64Data);
+const uploadImgFile = async (base64Data) => {
+  return await uploadImgToImgur(base64Data);
 }
-
 
 async function uploadToFileIO(fileBlob, fileName) {
-  try {  
+  try {
     const formData = new FormData();
     formData.append('file', fileBlob, fileName)
     formData.append('expires', '1d');
@@ -260,22 +265,23 @@ async function uploadToFileIO(fileBlob, fileName) {
 }
 
 async function uploadImgToImgur(base64Data) {
-  const formData = new FormData();
-  formData.append('image', base64Data);
-
-  const response = await fetch('https://api.imgur.com/3/image', {
-    method: 'POST',
-    headers: {
-      Authorization: "Client-ID d429872aeaa174c",
-      Accept: "application/json",
-    },
-    body: formData,
-  });
-
-  const data = await response.json();
-    
-  console.log(data);
-  return data;
+  try {
+    const formData = new FormData();
+    formData.append('image', base64Data);
+    const response = await fetch('https://api.imgur.com/3/image', {
+      method: 'POST',
+      headers: {
+        Authorization: "Client-ID d429872aeaa174c",
+        Accept: "application/json",
+      },
+      body: formData,
+    });
+    const resJson = await response.json();
+    return resJson.data.link;
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    throw error;
+  }
 }
 
 export { fetchIssues, createIssue, exchangeToken, uploadGeoJsonFile, uploadImgFile };

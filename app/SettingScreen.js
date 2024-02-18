@@ -15,7 +15,7 @@ const redirectUri = AuthSession.makeRedirectUri({
 export default function SettingScreen() {
   const [request, response, promptAsync] = AuthSession.useAuthRequest({
     clientId: githubClientId,
-    scopes: ['identity'],
+    scopes: ['identity', 'public_repo'],
     redirectUri,
   }, { authorizationEndpoint: 'https://github.com/login/oauth/authorize' });
 
