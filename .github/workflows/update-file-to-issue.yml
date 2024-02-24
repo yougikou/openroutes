@@ -9,9 +9,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
+        id: checkout
         uses: actions/checkout@v4
 
+      - name: Check if issue has 'route' label
+        id: check-label
+        uses: actions/github-script@v7.0.1
+        with:
+          script: |
+            const issueLabels = context.payload.issue.labels;
+            const hasRouteLabel = issueLabels.some(label => label.name === 'route');
+            console.log(`Issue has 'route' label: ${hasRouteLabel}`);
+            core.setOutput("hasRouteLabel", hasRouteLabel);
+
       - name: Extract GeoJSON URL
+        if: steps.check-label.outputs.hasRouteLabel == 'true'
         id: extract-url
         run: |
           GEOJSON_URL=$(echo "${{ github.event.issue.body }}" | grep "geojson:" | sed -n "s/^.*geojson: '\[file\](\(.*\))'.*$/\1/p")
@@ -19,10 +31,14 @@ jobs:
         shell: bash
         
       - name: Download File
+        if: steps.check-label.outputs.hasRouteLabel == 'true'
+        id: download-file
         run: |
           curl -X GET '${{ env.GEOJSON_URL }}' -H 'accept: */*' -o ./${{ github.event.issue.number }}-route.geojson
 
       - name: Upload to GitHub
+        if: steps.check-label.outputs.hasRouteLabel == 'true'
+        id: upload-file
         uses: LasyIsLazy/github-upload-action@v0.2.0
         with:
           access-token: ${{ secrets.ACCESS_TOKEN }}
@@ -33,6 +49,8 @@ jobs:
           branch-name: assets
       
       - name: Replace GeoJSON URL in Issue Body
+        if: steps.check-label.outputs.hasRouteLabel == 'true'
+        id: update-issue
         uses: actions/github-script@v7.0.1
         with:
           script: |
