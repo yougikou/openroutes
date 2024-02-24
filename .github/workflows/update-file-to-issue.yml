@@ -1,0 +1,47 @@
+name: Download and Update GeoJSON
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  download-and-update-geojson:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract GeoJSON URL
+        id: extract-url
+        run: |
+          GEOJSON_URL=$(echo "${{ github.event.issue.body }}" | grep "geojson:" | sed -n "s/^.*geojson: '\[file\](\(.*\))'.*$/\1/p")
+          echo "GEOJSON_URL=${GEOJSON_URL}" >> $GITHUB_ENV
+        shell: bash
+        
+      - name: Download File
+        run: |
+          curl -X GET '${{ env.GEOJSON_URL }}' -H 'accept: */*' -o ./${{ github.event.issue.number }}-route.geojson
+
+      - name: Upload to GitHub
+        uses: LasyIsLazy/github-upload-action@v0.2.0
+        with:
+          access-token: ${{ secrets.ACCESS_TOKEN }}
+          file-path: ./${{ github.event.issue.number }}-route.geojson
+          owner: yougikou
+          repo: openroutes
+          remote-dir: /geojson
+          branch-name: assets
+      
+      - name: Replace GeoJSON URL in Issue Body
+        uses: actions/github-script@v7.0.1
+        with:
+          script: |
+            const oldBody = `${{ github.event.issue.body }}`;
+            const newUrl = "https://github.com/yougikou/openroutes/blob/assets/geojson/${{ github.event.issue.number }}-route.geojson?raw=true";
+            const newBody = oldBody.replace(/geojson: \'\[file\]\(.*?\)'/g, `geojson: '[file](${newUrl})'`);
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: newBody,
+            });
