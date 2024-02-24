@@ -1,5 +1,5 @@
 import yaml from 'js-yaml';
-import { storeData } from "./StorageAPI";
+import { storeData, deleteData } from "./StorageAPI";
 
 const mockData = [
   {
@@ -211,10 +211,11 @@ const createIssue = async (routeData, token) => {
 const exchangeToken = async (cd) => {
   const ci = 'cd019fec05aa5b74ad81';
   const sc = '51d66fda4e5184bcc7a4ceaf99f78a8cf3acb028';
-  const ru = 'http://localhost:8081/githubauth';
+  const ru = 'https://yougikou.github.io/openroutes/githubauth';
   const proxyUrl = 'https://cors-anywhere.azm.workers.dev/';
 
   try {
+    await deleteData("github_access_token");
     const response = await fetch(proxyUrl + 'https://github.com/login/oauth/access_token', {
       method: 'POST',
       headers: {
@@ -226,9 +227,9 @@ const exchangeToken = async (cd) => {
 
     const data = await response.json();
     if (data.access_token) {
-      storeData("github_access_token", data.access_token)
+      await storeData("github_access_token", data.access_token);
     } else {
-      console.error('No access token found in response:', textResponse);
+      console.error('No access token found in response:', data);
     }
   } catch (error) {
     console.error('Token exchange error:', error);

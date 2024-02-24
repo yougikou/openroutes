@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "open-routes",
-    "slug": "open-routes",
+    "name": "openroutes",
+    "slug": "openroutes",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -26,7 +26,8 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "basePath": "openroutes"
     },
     "extra": {
       "eas": {

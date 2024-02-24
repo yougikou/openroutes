@@ -4,6 +4,7 @@ const storeData = async (key, value) => {
   try {
     await AsyncStorage.setItem(key, value);
   } catch (error) {
+    console.error("Error storing the data", error);
   }
 };
 
@@ -12,7 +13,17 @@ const readData = async (key) => {
     const value = await AsyncStorage.getItem(key);
     return value
   } catch (error) {
+    console.error("Error reading the data", error);
   }
 };
 
-export { storeData, readData };
+const deleteData = async (key) => {
+  try {
+    await AsyncStorage.removeItem(key);
+  } catch (error) {
+    console.error("Error deleting the data", error);
+  }
+};
+
+
+export { storeData, readData, deleteData };

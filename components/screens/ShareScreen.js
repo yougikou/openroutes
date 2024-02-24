@@ -3,17 +3,18 @@ import { StyleSheet, View, ScrollView, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from "expo-image-picker";
-import { Appbar, TextInput, Chip, Menu, SegmentedButtons, Button, Surface } from 'react-native-paper';
+import { Appbar, TextInput, Chip, Menu, SegmentedButtons, Button, Surface, Snackbar } from 'react-native-paper';
 import toGeoJSON from '@mapbox/togeojson';
 import tokml from 'geojson-to-kml';
-import i18n from '../components/i18n/i18n';
-import { createIssue, uploadImgFile, uploadGeoJsonFile } from "../components/GitHubAPI";
-import { readData } from "../components/StorageAPI";
+import i18n from '../i18n/i18n';
+import { createIssue, uploadImgFile, uploadGeoJsonFile } from "../apis/GitHubAPI";
+import { readData } from "../apis/StorageAPI";
+import Redirector from "../Redirector";
 
 export default function ShareScreen() {
   const [geojsonData, setGeojsonData] = useState(null);
   const [originalFileName, setOriginalFileName] = useState(null);
-  const [fileInfo, setFileInfo] = useState('');
+  const [fileInfo, setFileInfo] = useState(null);
   const [imgUri, setImgUri] = useState(null);
   const [githubToken, setGithubToken] = useState(null);
   const [routeData, setRouteData] = React.useState({
@@ -150,16 +151,25 @@ export default function ShareScreen() {
     }));
 
     createIssue({ ...routeData, coverimg: imgURL, geojson: jsonURL }, githubToken)
-    // const mockRouteData = {
-    //   "name": " 大仏ハイキングルート",
-    //   "type": "hiking",
-    //   "date": "2013-05-04",
-    //   "description": " 大仏ハイキングルート",
-    //   "coverimg": "https://i.imgur.com/wzH7Itf.jpg",
-    //   "geojson": "https://file.io/YKmac8Oqzxwf"
-    // }
-    // createIssue(mockRouteData, githubToken)
+
+    // reset input
+    setRouteData({
+      name: '',
+      type: 'hiking',
+      date: '',
+      description: '',
+      coverimg: '',
+      geojson: '',
+    });
+    setGeojsonData(null);
+    setOriginalFileName(null);
+    setFileInfo(null);
+    setImgUri(null);
+    onToggleSnackBar();
   }
+
+  const [snackbarVisible, setSnackbarVisible] = React.useState(false);
+  const onToggleSnackBar = () => setSnackbarVisible(!snackbarVisible);
 
   useEffect(() => {
     const fetchToken = async () => {
@@ -175,8 +185,10 @@ export default function ShareScreen() {
 
   return (
     <View style={styles.container}>
+      <Redirector />
       <Appbar.Header elevation={2}>
         <Appbar.Content title={i18n.t('title_share')} />
+        <Appbar.Action icon="github" />
         <Menu
           visible={menuVisible}
           onDismiss={closeMenu}
@@ -189,14 +201,14 @@ export default function ShareScreen() {
         <Button style={styles.fileButton} icon="routes" mode="elevated" onPress={pickFile}>
           {i18n.t('share_upload_file')}
         </Button>
-        <Chip style={styles.inputWidget} icon="file" compact="true">
+        { fileInfo? (<Chip style={styles.inputWidget} icon="file" compact="true">
           {fileInfo}
           { (geojsonData && !githubToken) && 
             <><br/>You can only covert file with menu.
               <br/>Github Token is required for creating.
               <br/>Go to setting to authrize with your github account first.</>
           }
-        </Chip>
+        </Chip>): <></>}        
         <TextInput style={styles.inputWidget} mode="outlined"
           label={i18n.t('share_record_date')} value={routeData.date} 
           onChangeText={(value) => updateRouteData('date', value)} />
@@ -227,10 +239,15 @@ export default function ShareScreen() {
             label={i18n.t('share_course_desc')} value={routeData.description}
             onChangeText={(value) => updateRouteData('description', value)} multiline />
         </View>
-        <Button style={styles.submitButton} icon="routes" mode="elevated" onPress={() => handleSubmit(imgUri, geojsonData)} disabled={!geojsonData || !githubToken}>
+        <Button style={styles.submitButton} icon="routes" mode="elevated" onPress={() => handleSubmit(imgUri, geojsonData)} disabled={!geojsonData || !githubToken || !routeData.date || !routeData.name}>
           {i18n.t('share_submit')}
         </Button>
       </ScrollView>
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={onToggleSnackBar}>
+        { "Route info is submitted. Thank you for sharing. \nYou can view it in exploring screen now. "}
+      </Snackbar>
     </View>
   );
 };

@@ -1,8 +1,8 @@
 import React from 'react';
-import HomeScreen from "../components/screens/HomeScreen";
+import ShareScreen from "../components/screens/ShareScreen";
 
 export default function Layout() {
   return (
-    <HomeScreen/>
+    <ShareScreen/>
   )
 }

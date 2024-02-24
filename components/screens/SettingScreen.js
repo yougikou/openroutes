@@ -2,14 +2,15 @@ import React, { useEffect } from 'react';
 import * as AuthSession from 'expo-auth-session';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Appbar, List } from 'react-native-paper';
-import i18n from '../components/i18n/i18n';
+import i18n from '../i18n/i18n';
+import Redirector from "../Redirector";
 
 const useProxy = Platform.select({ web: false, default: true });
 
 const githubClientId = 'cd019fec05aa5b74ad81';
 const redirectUri = AuthSession.makeRedirectUri({
   useProxy: true,
-  path: 'githubauth',
+  path: 'openroutes/githubauth',
 });
 
 export default function SettingScreen() {
@@ -28,8 +29,10 @@ export default function SettingScreen() {
 
   return (
     <View style={styles.container}>
+      <Redirector />
       <Appbar.Header elevation={2}>
         <Appbar.Content title={i18n.t('title_setting')} />
+        <Appbar.Action icon="github" />
       </Appbar.Header>
       <List.Section>
         <List.Subheader>{i18n.t('setting_account')}</List.Subheader>

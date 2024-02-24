@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, TextInput, ScrollView, Image, Button, Pressable, LayoutAnimation } from 'react-native';
+import { StyleSheet, View, ScrollView,Pressable } from 'react-native';
 import { FlashList } from "@shopify/flash-list";
 import { useNavigation } from '@react-navigation/native';
-import { Appbar, Card, Title, Paragraph, Avatar, Chip, Searchbar, Button as PaperButton, BottomNavigation } from 'react-native-paper';
-import i18n from '../components/i18n/i18n';
-import { fetchIssues } from '../components/GitHubAPI';
+import { Appbar, Card, Avatar, Chip, Searchbar, Button as PaperButton } from 'react-native-paper';
+import i18n from '../i18n/i18n';
+import { fetchIssues } from '../apis/GitHubAPI';
+import Redirector from "../Redirector";
 
 export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,9 +62,10 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      <Redirector />
       <Appbar.Header elevation={2}>
         <Appbar.Content title={ i18n.t('title_explore') } />
-        <Appbar.Action icon="earth" onPress={() => {}} />
+        <Appbar.Action icon="github" />
       </Appbar.Header>
       <View>
         <Searchbar style={styles.searchbar} mode='bar' elevation={2}

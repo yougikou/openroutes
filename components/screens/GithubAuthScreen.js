@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
 import { Text, Button } from 'react-native-paper';
-import { exchangeToken } from "../components/GitHubAPI";
-import { readData } from "../components/StorageAPI";
+import { exchangeToken } from "../apis/GitHubAPI";
+import { readData } from "../apis/StorageAPI";
 
 
 export default function GithubAuthScreen() {
@@ -11,17 +11,26 @@ export default function GithubAuthScreen() {
   const [tokenStatus, setTokenStatus] = useState('checking');
 
   useEffect(() => {
-    const code = route.params?.code;
-    if (code) {
-      exchangeToken(code);
-    }
-
-    const token = readData('github_access_token');
-    if (token) {
-      setTokenStatus('success');
-    } else {
-      setTokenStatus('failed');
-    }
+    const retrieveToken = async () => {
+      try {
+        const { code } = route.params
+        if (code) {
+          await exchangeToken(code);
+        }
+    
+        const token = await readData('github_access_token');
+        if (token) {
+          setTokenStatus('success');
+        } else {
+          setTokenStatus('failed');
+        }
+      } catch (error) {
+        console.error("Error exchange Token:", error);
+        setTokenStatus('failed');
+      }
+    };
+  
+    retrieveToken();
   }, []);
 
   return (
