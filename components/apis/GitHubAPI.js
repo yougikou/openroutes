@@ -116,19 +116,25 @@ const parseYaml = (yamlString) => {
   }
 };
 
-const fetchIssues = async (page = 1, perPage = 10, filters = {}) => {
-  let url = `https://api.github.com/repos/${process.env.EXPO_PUBLIC_GITHUB_OWNER}/${process.env.EXPO_PUBLIC_GITHUB_REPO}/issues?page=${page}&per_page=${perPage}`;
+const fetchIssues = async (page = 1, perPage = 10, filters = {}, token) => {
+  let url = `https://api.github.com/repos/${process.env.EXPO_PUBLIC_GITHUB_OWNER}/${process.env.EXPO_PUBLIC_GITHUB_REPO}/issues?page=${page}&per_page=${perPage}&labels=route`;
   Object.keys(filters).forEach(key => {
     url += `&${key}=${filters[key]}`;
   });
 
   try {
-    // const response = await fetch(url);
-    // if (!response.ok) {
-    //   throw new Error(`GitHub API responded with status ${response.status}`);
-    // }
-    // const rawData = await response.json();
-    const rawData = mockData;
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `token ${token}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`GitHub API responded with status ${response.status}`);
+    }
+    const rawData = await response.json();
+    // const rawData = mockData;
 
     const processedData = rawData.map(issue => {
       const bodyObj = yaml.load(issue.body);
@@ -136,7 +142,8 @@ const fetchIssues = async (page = 1, perPage = 10, filters = {}) => {
         distance: bodyObj.distance_km,
         duration: bodyObj.duration_hour,
         description: bodyObj.description,
-        attach_files: bodyObj.attach_files.map(fileStr =>(parseAttachFile(fileStr))),
+        coverimg: parseAttachFile(bodyObj.coverimg),
+        geojson: parseAttachFile(bodyObj.geojson),
         comments_url: issue.comments_url,
         id: issue.id,
         number: issue.number,
@@ -146,11 +153,12 @@ const fetchIssues = async (page = 1, perPage = 10, filters = {}) => {
           id: issue.user.id,
           avatar_url: issue.user.avatar_url
         },
-        labels: issue.labels.map(label => ({
-          id: label.id,
-          name: label.name,
-          description: label.description
-        })),
+        labels: issue.labels.filter(label => label.name !== 'route')
+          .map(label => ({
+            id: label.id,
+            name: label.name,
+            description: label.description
+          })),
         state: issue.state,
         comments: issue.comments,
         created_at: issue.created_at,

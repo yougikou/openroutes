@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useRoute } from '@react-navigation/native';
 import { StyleSheet, View, ScrollView, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from "expo-image-picker";
-import { Appbar, TextInput, Chip, Menu, SegmentedButtons, Button, Surface, Snackbar } from 'react-native-paper';
+import { Appbar, TextInput, Chip, Menu, SegmentedButtons, Button, Surface, Snackbar, ActivityIndicator } from 'react-native-paper';
 import toGeoJSON from '@mapbox/togeojson';
 import tokml from 'geojson-to-kml';
 import i18n from '../i18n/i18n';
@@ -25,6 +26,8 @@ export default function ShareScreen() {
     coverimg: '',
     geojson: '',
   });
+
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const updateRouteData = (key, value) => {
     setRouteData((prevRouteData) => ({
@@ -90,7 +93,7 @@ export default function ShareScreen() {
           setImgUri(result.assets[0].uri);
         } 
     } 
-}; 
+  }; 
 
   const downloadFile = async (data, filename, mimeType) => {
     const blob = new Blob([data], { type: mimeType });
@@ -131,46 +134,63 @@ export default function ShareScreen() {
   };
 
   const handleSubmit = async (imgDataUri, jsonData) => {
-    const parts = imgDataUri.split(';');
-    if (parts.length !== 2) {
-      throw new Error('Invalid Image File');
+    setIsProcessing(true);
+    try {
+      if (jsonData === null || 
+        routeData.date.trim().length === 0 ||
+        routeData.name.trim().length === 0 ) {
+        throw new Error(`Input data invalid. Geojson: ${jsonData != null} Course date: ${routeData.date} Course name: ${routeData.name})`);
+      }
+
+      if (process.env.NODE_ENV === 'production') {
+        let imgURL = null;
+        if (imgDataUri && imgDataUri.includes(';') && imgDataUri.includes(',')) {
+            const parts = imgDataUri.split(';');
+            const subparts = parts[1].split(',');
+            if (parts.length === 2 && subparts.length === 2) {
+                const base64Data = subparts[1];
+                imgURL = await uploadImgFile(base64Data);
+            }
+        }
+
+        const jsonURL = await uploadGeoJsonFile(jsonData);
+        setRouteData((prevRouteData) => ({
+          ...prevRouteData,
+          coverimg: imgURL,
+          geojson: jsonURL,
+        }));
+
+        await createIssue({ ...routeData, coverimg: imgURL, geojson: jsonURL }, githubToken)
+      } else {
+        console.log("In development: sleep 5s")
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+
+      onToggleSnackBar();
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setIsProcessing(false);
+      // reset input
+      setRouteData({
+        name: '',
+        type: 'hiking',
+        date: '',
+        description: '',
+        coverimg: '',
+        geojson: '',
+      });
+      setGeojsonData(null);
+      setOriginalFileName(null);
+      setFileInfo(null);
+      setImgUri(null);
     }
-
-    const subparts = parts[1].split(',');
-    if (subparts.length !== 2) {
-      throw new Error('Invalid Image File');
-    }
-    const base64Data = subparts[1];
-
-    const imgURL = await uploadImgFile(base64Data);
-    const jsonURL = await uploadGeoJsonFile(jsonData);
-    setRouteData((prevRouteData) => ({
-      ...prevRouteData,
-      coverimg: imgURL,
-      geojson: jsonURL,
-    }));
-
-    createIssue({ ...routeData, coverimg: imgURL, geojson: jsonURL }, githubToken)
-
-    // reset input
-    setRouteData({
-      name: '',
-      type: 'hiking',
-      date: '',
-      description: '',
-      coverimg: '',
-      geojson: '',
-    });
-    setGeojsonData(null);
-    setOriginalFileName(null);
-    setFileInfo(null);
-    setImgUri(null);
-    onToggleSnackBar();
   }
 
   const [snackbarVisible, setSnackbarVisible] = React.useState(false);
   const onToggleSnackBar = () => setSnackbarVisible(!snackbarVisible);
 
+  const route = useRoute();
   useEffect(() => {
     const fetchToken = async () => {
       const token = await readData('github_access_token');
@@ -181,14 +201,14 @@ export default function ShareScreen() {
     };
 
     fetchToken();
-  }, []);
+  }, [route]);
 
   return (
     <View style={styles.container}>
       <Redirector />
       <Appbar.Header elevation={2}>
         <Appbar.Content title={i18n.t('title_share')} />
-        <Appbar.Action icon="github" />
+        <Appbar.Action icon="github" color={githubToken ? "#4CAF50" : ""} />
         <Menu
           visible={menuVisible}
           onDismiss={closeMenu}
@@ -198,7 +218,8 @@ export default function ShareScreen() {
         </Menu>
       </Appbar.Header>
       <ScrollView>
-        <Button style={styles.fileButton} icon="routes" mode="elevated" onPress={pickFile}>
+        {isProcessing && <ActivityIndicator style={styles.activityIndicator} size="large" animating={true} color="#0000ff" />}
+        <Button style={styles.fileButton} icon="routes" mode="elevated" onPress={pickFile} disabled={isProcessing}>
           {i18n.t('share_upload_file')}
         </Button>
         { fileInfo? (<Chip style={styles.inputWidget} icon="file" compact="true">
@@ -209,19 +230,19 @@ export default function ShareScreen() {
               <br/>Go to setting to authrize with your github account first.</>
           }
         </Chip>): <></>}        
-        <TextInput style={styles.inputWidget} mode="outlined"
+        <TextInput style={styles.inputWidget} mode="outlined" disabled={isProcessing}
           label={i18n.t('share_record_date')} value={routeData.date} 
           onChangeText={(value) => updateRouteData('date', value)} />
-        <TextInput style={styles.inputWidget} mode="outlined" 
+        <TextInput style={styles.inputWidget} mode="outlined" disabled={isProcessing}
           label={i18n.t('share_course_name')} value={routeData.name}
           onChangeText={(value) => updateRouteData('name', value)} right={<TextInput.Affix text="/50" />} />
         <SegmentedButtons style={styles.inputWidget}
           value={routeData.type}
           onValueChange={(value) => updateRouteData('type', value)}
           buttons={[
-            { value: 'hiking', label: i18n.t('hiking')},
-            { value: 'walking', label: i18n.t('walking')},
-            { value: 'cycling', label: i18n.t('cycling')},
+            { value: 'hiking', label: i18n.t('hiking'), disabled: isProcessing},
+            { value: 'walking', label: i18n.t('walking'), disabled: isProcessing},
+            { value: 'cycling', label: i18n.t('cycling'), disabled: isProcessing},
           ]}
         />
         <View style={styles.inputWidget}> 
@@ -230,16 +251,17 @@ export default function ShareScreen() {
               {imgUri ? ( 
                 <Image style={styles.image} source={{ uri: imgUri }} /> 
               ) : (<></>)} 
-              <Button style={styles.imageButton} icon="camera" onPress={pickImage}>{i18n.t('share_upload_img')}</Button>
+              <Button style={styles.imageButton} icon="camera" onPress={pickImage} disabled={isProcessing}>{i18n.t('share_upload_img')}</Button>
             </View> 
           </Surface>
         </View>
         <View style={styles.inputWidget}>
-          <TextInput style={styles.textArea} mode="outlined" 
+          <TextInput style={styles.textArea} mode="outlined" disabled={isProcessing}
             label={i18n.t('share_course_desc')} value={routeData.description}
             onChangeText={(value) => updateRouteData('description', value)} multiline />
         </View>
-        <Button style={styles.submitButton} icon="routes" mode="elevated" onPress={() => handleSubmit(imgUri, geojsonData)} disabled={!geojsonData || !githubToken || !routeData.date || !routeData.name}>
+        <Button style={styles.submitButton} icon="routes" mode="elevated"
+          onPress={() => handleSubmit(imgUri, geojsonData)} disabled={!geojsonData || !githubToken || !routeData.date || !routeData.name || isProcessing}>
           {i18n.t('share_submit')}
         </Button>
       </ScrollView>
@@ -307,5 +329,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     margin:3
+  },
+  activityIndicator: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
