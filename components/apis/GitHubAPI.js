@@ -123,12 +123,17 @@ const fetchIssues = async (page = 1, perPage = 10, filters = {}, token) => {
   });
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `token ${token}`,
-        'Accept': 'application/vnd.github.v3+json'
-      }
-    });
+    var response = null;
+    if(token != null && token.length > 0) {
+      response = await fetch(url, {
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      });
+    } else {
+      response = await fetch(url);
+    }
 
     if (!response.ok) {
       throw new Error(`GitHub API responded with status ${response.status}`);

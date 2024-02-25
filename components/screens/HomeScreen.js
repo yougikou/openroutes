@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useRoute } from '@react-navigation/native';
-import { StyleSheet, View, ScrollView,Pressable } from 'react-native';
+import { StyleSheet, View, Pressable } from 'react-native';
 import { FlashList } from "@shopify/flash-list";
 import { useNavigation } from '@react-navigation/native';
 import { Appbar, Card, Avatar, Chip, Searchbar, Button as PaperButton } from 'react-native-paper';
@@ -14,10 +13,11 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [issues, setIssues] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
   const filters = {
     state: 'all',
   };
-  const perPage = 4;
+  const perPage = 10;
 
   const handleSearch = () => {
   };
@@ -48,32 +48,33 @@ export default function HomeScreen() {
     );
   };
 
-  useEffect(() => {
-    const resetAndLoad = async () => {
-      setCurrentPage(1);
-      setIssues([]);
-      await loadIssues();
-    };
-
-    resetAndLoad();
-  }, []);
+  const resetAndLoad = async () => {
+    setCurrentPage(1);
+    setIssues([]);
+    setTimeout(() => {
+      loadIssues();
+    }, 0);
+  };
 
   const loadIssues = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+
     try {
       const token = await readData('github_access_token');
-      console.log("github access token: " + token);
       if (token) {
         setGithubToken(token);
       }
 
       const issuesData = await fetchIssues(currentPage, perPage, filters, token);
-      console.log(issuesData);
       if (issuesData && issuesData.length > 0) {
-        setIssues(prevIssues => [...prevIssues, ...issuesData]);
-        setCurrentPage(prevPage => prevPage + 1);
+        await setIssues(prevIssues => [...prevIssues, ...issuesData]);
+        await setCurrentPage(prevPage => prevPage + 1);
       }
     } catch (error) {
       console.error("Error fetching issues:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -82,6 +83,7 @@ export default function HomeScreen() {
       <Redirector />
       <Appbar.Header elevation={2}>
         <Appbar.Content title={ i18n.t('title_explore') } />
+        <Appbar.Action icon="refresh" onPress={resetAndLoad} />
         <Appbar.Action icon="github" color={githubToken ? "#4CAF50" : ""} />
       </Appbar.Header>
       <View>
@@ -91,17 +93,14 @@ export default function HomeScreen() {
           value={searchQuery}
         />
       </View>
-      <ScrollView>
-        <FlashList
-          ref={list}
-          keyExtractor={(item) => (item.id)}
-          renderItem={renderItem}
-          estimatedItemSize={100}
-          data={issues}
-          onEndReached={loadIssues}
-          onEndReachedThreshold={0.1}
-        />
-      </ScrollView>
+      <FlashList
+        keyExtractor={(item) => (item.id)}
+        renderItem={renderItem}
+        estimatedItemSize={100}
+        data={issues}
+        onEndReached={loadIssues}
+        onEndReachedThreshold={0.1}
+      />
     </View>
   );
 };
