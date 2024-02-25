@@ -32,11 +32,13 @@ export default function HomeScreen() {
       <Pressable onPress={() => {}}>
         <Card style={styles.card}  mode="elevated" key={item.id} elevation={2}>
           <Card.Cover source={{ uri: item.coverimg.uri }} />
-          <Card.Title title={item.number + ")" + item.title} left={() => <Avatar.Image size={32} source={{ uri: item.avatar }} />} />
+          <Card.Title title={item.title} left={() => <Avatar.Image size={32} source={{ uri: item.avatar }} />} />
           <Card.Content>
             <View style={styles.row}>
-              <Chip style={styles.chip} icon="map-marker-distance">{item.distance}{i18n.t('home_unit_km')}</Chip>
-              <Chip style={styles.chip} icon="clock">{item.duration}</Chip>
+              {item.distance?
+                (<Chip style={styles.chip} icon="map-marker-distance">{item.distance} {i18n.t('home_unit_km')}</Chip>):<></>}
+              {item.duration?
+                (<Chip style={styles.chip} icon="clock">{item.duration} {i18n.t('home_unit_hour')}</Chip>):<></>}
               {item.labels.map(label => (<Chip key={label.name} style={styles.chip}>{i18n.t(label.name, { defaultValue: label.name })}</Chip>))}
             </View>
           </Card.Content>

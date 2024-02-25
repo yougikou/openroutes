@@ -22,6 +22,8 @@ export default function ShareScreen() {
     name: '',
     type: 'hiking',
     date: '',
+    distance_km: '',
+    duration_hour: '',
     description: '',
     coverimg: '',
     geojson: '',
@@ -135,6 +137,7 @@ export default function ShareScreen() {
 
   const handleSubmit = async (imgDataUri, jsonData) => {
     setIsProcessing(true);
+    console.log(routeData);
     try {
       if (jsonData === null || 
         routeData.date.trim().length === 0 ||
@@ -208,14 +211,14 @@ export default function ShareScreen() {
       <Redirector />
       <Appbar.Header elevation={2}>
         <Appbar.Content title={i18n.t('title_share')} />
-        <Appbar.Action icon="github" color={githubToken ? "#4CAF50" : ""} />
         <Menu
           visible={menuVisible}
           onDismiss={closeMenu}
-          anchor={<Appbar.Action icon="menu" onPress={openMenu} />}>
+          anchor={<Appbar.Action icon="file-marker" color={geojsonData ? "#4CAF50" : ""} onPress={openMenu} />}>
           <Menu.Item onPress={() => handleDownload('geojson')} title={i18n.t('share_download_geojsonfile')} disabled={!geojsonData} />
           <Menu.Item onPress={() => handleDownload('kml')} title={i18n.t('share_download_kmlfile')} disabled={!geojsonData} />
         </Menu>
+        <Appbar.Action icon="github" color={githubToken ? "#4CAF50" : ""} />
       </Appbar.Header>
       <ScrollView>
         {isProcessing && <ActivityIndicator style={styles.activityIndicator} size="large" animating={true} color="#0000ff" />}
@@ -245,7 +248,7 @@ export default function ShareScreen() {
             { value: 'cycling', label: i18n.t('cycling'), disabled: isProcessing},
           ]}
         />
-        <View style={styles.inputWidget}> 
+        <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 10}}> 
           <Surface style={styles.surface} elevation={1}>
             <View style={styles.image}> 
               {imgUri ? ( 
@@ -254,6 +257,14 @@ export default function ShareScreen() {
               <Button style={styles.imageButton} icon="camera" onPress={pickImage} disabled={isProcessing}>{i18n.t('share_upload_img')}</Button>
             </View> 
           </Surface>
+          <View>
+            <TextInput style={{width: 250, height: 40, marginBottom:3}} mode="outlined" keyboardType="numeric" disabled={isProcessing}
+              label={i18n.t('share_course_distance')} value={routeData.distance_km}
+              onChangeText={(value) => updateRouteData('distance_km', value)} />
+            <TextInput style={{width: 250, height: 40, marginTop: 3}} mode="outlined" keyboardType="numeric" disabled={isProcessing}
+              label={i18n.t('share_course_duration')} value={routeData.duration_hour}
+              onChangeText={(value) => updateRouteData('duration_hour', value)} />
+          </View>
         </View>
         <View style={styles.inputWidget}>
           <TextInput style={styles.textArea} mode="outlined" disabled={isProcessing}
@@ -293,7 +304,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   textArea: {
-    height: 200
+    height: 180
   },
   image: { 
     width: 100, 
