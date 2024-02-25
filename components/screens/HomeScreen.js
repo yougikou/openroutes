@@ -2,10 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Pressable } from 'react-native';
 import { FlashList } from "@shopify/flash-list";
 import { useNavigation } from '@react-navigation/native';
-import { Appbar, Card, Avatar, Chip, Searchbar, Button as PaperButton } from 'react-native-paper';
+import { Appbar, Card, Avatar, Chip, Searchbar, Button } from 'react-native-paper';
 import i18n from '../i18n/i18n';
 import { fetchIssues } from '../apis/GitHubAPI';
 import { readData } from "../apis/StorageAPI";
+import tokml from 'geojson-to-kml';
+import togpx from 'togpx';
 import Redirector from "../Redirector";
 
 export default function HomeScreen() {
@@ -19,7 +21,51 @@ export default function HomeScreen() {
   };
   const perPage = 10;
 
-  const handleSearch = () => {
+  const downloadFile = async (data, filename, mimeType) => {
+    const blob = new Blob([data], { type: mimeType });
+    const href = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = href;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(href);
+  };
+
+  const convertBlobUrlToRawUrl = (githubBlobUrl) => {
+    return githubBlobUrl
+      .replace('github.com', 'raw.githubusercontent.com')
+      .replace('/blob/', '/');
+  }
+
+  const downloadGpxFile = async(name, url) => {
+    try {
+      const response = await fetch(convertBlobUrlToRawUrl(url));
+      const geoJsonData = await response.json();
+      const data = togpx(geoJsonData);
+      mimeType = 'application/gpx+xml';
+      fileExtension = 'gpx';
+      const filename = `${name}.${fileExtension}`;
+      downloadFile(data, filename, mimeType);
+    } catch (error) {
+      console.error('Failed to download gpx or convert GeoJSON', error);
+    }
+  };
+
+  const downloadKmlFile = async(name, url) => {
+
+    try {
+      const response = await fetch(convertBlobUrlToRawUrl(url));
+      const geoJsonData = await response.json();
+      const data = tokml(geoJsonData);
+      mimeType = 'application/vnd.google-earth.kml+xml';
+      fileExtension = 'kml';
+      const filename = `${name}.${fileExtension}`;
+      downloadFile(data, filename, mimeType);
+    } catch (error) {
+      console.error('Failed to download kml or convert GeoJSON', error);
+    }
   };
 
   const handleToDetail = () => {
@@ -43,7 +89,9 @@ export default function HomeScreen() {
             </View>
           </Card.Content>
           <Card.Actions>
-            <PaperButton onPress={handleToDetail}>{ i18n.t('home_detail') }</PaperButton>
+            <Button mode='contained' onPress={() =>downloadGpxFile(item.title, item.geojson.uri)}>{ i18n.t('home_download_gpx') }</Button>
+            <Button mode='contained' onPress={() =>downloadKmlFile(item.title, item.geojson.uri)}>{ i18n.t('home_download_kml') }</Button>
+            <Button mode='outlined' onPress={handleToDetail} disabled>{ i18n.t('home_detail')}</Button>
           </Card.Actions>
         </Card>
       </Pressable>
