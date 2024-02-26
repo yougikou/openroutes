@@ -208,7 +208,6 @@ export default function ShareScreen() {
   useEffect(() => {
     const fetchToken = async () => {
       const token = await readData('github_access_token');
-      console.log("github access token: " + token);
       if (token) {
         setGithubToken(token);
       }

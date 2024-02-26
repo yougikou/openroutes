@@ -1,8 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import * as AuthSession from 'expo-auth-session';
 import { View, StyleSheet, Platform } from 'react-native';
+import { useRoute } from '@react-navigation/native';
 import { Appbar, List } from 'react-native-paper';
 import i18n from '../i18n/i18n';
+import { readData } from "../apis/StorageAPI";
 import Redirector from "../Redirector";
 
 const useProxy = Platform.select({ web: false, default: true });
@@ -14,6 +16,7 @@ const redirectUri = AuthSession.makeRedirectUri({
 });
 
 export default function SettingScreen() {
+  const [githubToken, setGithubToken] = useState(null);
   const [request, response, promptAsync] = AuthSession.useAuthRequest({
     clientId: githubClientId,
     scopes: ['identity', 'public_repo'],
@@ -26,6 +29,17 @@ export default function SettingScreen() {
       console.log(code);
     }
   }, [response]);
+
+  const route = useRoute();
+  useEffect(() => {
+    const fetchToken = async () => {
+      const token = await readData('github_access_token');
+      if (token) {
+        setGithubToken(token);
+      }
+    };
+    fetchToken();
+  }, [route]);
 
   return (
     <View style={styles.container}>
