@@ -32,7 +32,7 @@ export default function SettingScreen() {
       <Redirector />
       <Appbar.Header elevation={2}>
         <Appbar.Content title={i18n.t('title_setting')} />
-        <Appbar.Action icon="github" />
+        <Appbar.Action icon="github" color={githubToken ? "#4CAF50" : ""} />
       </Appbar.Header>
       <List.Section>
         <List.Subheader>{i18n.t('setting_account')}</List.Subheader>

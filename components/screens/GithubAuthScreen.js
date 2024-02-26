@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { Text, Button } from 'react-native-paper';
+import i18n from '../i18n/i18n';
 import { exchangeToken } from "../apis/GitHubAPI";
 import { readData } from "../apis/StorageAPI";
-
 
 export default function GithubAuthScreen() {
   const route = useRoute();
@@ -13,20 +13,21 @@ export default function GithubAuthScreen() {
   useEffect(() => {
     const retrieveToken = async () => {
       try {
-        const { code } = route.params
+        const code = route.params?.code ?? null;
         if (code) {
           await exchangeToken(code);
-        }
-    
-        const token = await readData('github_access_token');
-        if (token) {
-          setTokenStatus('success');
+          window.location.replace(window.location.origin + window.location.pathname);
         } else {
-          setTokenStatus('failed');
+          const token = await readData('github_access_token');
+          if (token) {
+            setTokenStatus('success');
+          } else {
+            setTokenStatus('failed');
+          }
         }
       } catch (error) {
         console.error("Error exchange Token:", error);
-        setTokenStatus('failed');
+        window.location.replace(window.location.origin + window.location.pathname);
       }
     };
   
@@ -37,8 +38,8 @@ export default function GithubAuthScreen() {
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
       <Text variant="headlineLarge" 
         style={{ alignItems: 'center', margin: 10}}>
-        {tokenStatus === 'success' && "Token Saved."}
-        {tokenStatus === 'failed' && "Failed. Please try again."}
+        {tokenStatus === 'success' && i18n.t('github_auth_success')}
+        {tokenStatus === 'failed' && i18n.t('github_auth_failed')}
       </Text>
       <Button mode="elevated" onPress={() => window.close()}>Close</Button>
     </View>

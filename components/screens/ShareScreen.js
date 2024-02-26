@@ -4,7 +4,7 @@ import { StyleSheet, View, ScrollView, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from "expo-image-picker";
-import { Appbar, TextInput, Chip, Menu, SegmentedButtons, Button, Surface, Snackbar, ActivityIndicator } from 'react-native-paper';
+import { Appbar, Text, TextInput, Chip, Menu, SegmentedButtons, Button, Surface, Snackbar, ActivityIndicator, Portal, Dialog } from 'react-native-paper';
 import toGeoJSON from '@mapbox/togeojson';
 import tokml from 'geojson-to-kml';
 import i18n from '../i18n/i18n';
@@ -29,6 +29,7 @@ export default function ShareScreen() {
     geojson: '',
   });
 
+  const [isDialogVisible, setIsDialogVisible] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const updateRouteData = (key, value) => {
@@ -136,6 +137,7 @@ export default function ShareScreen() {
   };
 
   const handleSubmit = async (imgDataUri, jsonData) => {
+    setIsDialogVisible(false);
     setIsProcessing(true);
     console.log(routeData);
     try {
@@ -169,7 +171,7 @@ export default function ShareScreen() {
         await new Promise(resolve => setTimeout(resolve, 5000));
       }
 
-      onToggleSnackBar();
+      onToggleSnackBar(i18n.t('share_submit_confirmed'));
     } catch (error) {
       console.error("Error:", error);
     } finally {
@@ -179,6 +181,8 @@ export default function ShareScreen() {
         name: '',
         type: 'hiking',
         date: '',
+        distance_km: '',
+        duration_hour: '',
         description: '',
         coverimg: '',
         geojson: '',
@@ -190,8 +194,15 @@ export default function ShareScreen() {
     }
   }
 
-  const [snackbarVisible, setSnackbarVisible] = React.useState(false);
-  const onToggleSnackBar = () => setSnackbarVisible(!snackbarVisible);
+  const [snackbarVisible, setSnackbarVisible] = useState({
+    isVisible: false,
+    message: '',
+  });
+
+  const onToggleSnackBar = (message) => setSnackbarVisible({
+    isVisible: !snackbarVisible.isVisible,
+    message: message
+  });
 
   const route = useRoute();
   useEffect(() => {
@@ -221,7 +232,6 @@ export default function ShareScreen() {
         <Appbar.Action icon="github" color={githubToken ? "#4CAF50" : ""} />
       </Appbar.Header>
       <ScrollView>
-        {isProcessing && <ActivityIndicator style={styles.activityIndicator} size="large" animating={true} color="#0000ff" />}
         <Button style={styles.fileButton} icon="routes" mode="elevated" onPress={pickFile} disabled={isProcessing}>
           {i18n.t('share_upload_file')}
         </Button>
@@ -272,15 +282,28 @@ export default function ShareScreen() {
             onChangeText={(value) => updateRouteData('description', value)} multiline />
         </View>
         <Button style={styles.submitButton} icon="routes" mode="elevated"
-          onPress={() => handleSubmit(imgUri, geojsonData)} disabled={!geojsonData || !githubToken || !routeData.date || !routeData.name || isProcessing}>
+          onPress={() => setIsDialogVisible(true)} disabled={!geojsonData || !githubToken || !routeData.date || !routeData.name || isProcessing}>
           {i18n.t('share_submit')}
         </Button>
+        {isProcessing && <ActivityIndicator style={styles.activityIndicator} size="large" animating={true} color="#0000ff" />}
       </ScrollView>
       <Snackbar
-        visible={snackbarVisible}
-        onDismiss={onToggleSnackBar}>
-        { "Route info is submitted. Thank you for sharing. \nYou can view it in exploring screen now. "}
+        visible={snackbarVisible.isVisible}
+        onDismiss={() => onToggleSnackBar("")}>
+        { snackbarVisible.message }
       </Snackbar>
+      <Portal>
+        <Dialog visible={isDialogVisible} onDismiss={() => setIsDialogVisible(false)}>
+          <Dialog.Title>{i18n.t('share_submit_dialog_title')}</Dialog.Title>
+          <Dialog.Content>
+            <Text>{i18n.t('share_submit_dialog_message')}</Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setIsDialogVisible(false)}>{i18n.t('cancel')}</Button>
+            <Button onPress={() => handleSubmit(imgUri, geojsonData)}>{i18n.t('confirm')}</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </View>
   );
 };

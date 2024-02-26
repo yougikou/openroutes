@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View, Pressable } from 'react-native';
 import { FlashList } from "@shopify/flash-list";
 import { useNavigation } from '@react-navigation/native';
-import { Appbar, Card, Avatar, Chip, Searchbar, Button } from 'react-native-paper';
+import { Appbar, Card, Avatar, Chip, Searchbar, Button, Snackbar } from 'react-native-paper';
 import i18n from '../i18n/i18n';
 import { fetchIssues } from '../apis/GitHubAPI';
 import { readData } from "../apis/StorageAPI";
@@ -40,6 +40,11 @@ export default function HomeScreen() {
   }
 
   const downloadGpxFile = async(name, url) => {
+    if(!url.includes("github")) {
+      onToggleSnackBar(i18n.t('home_download_prep'))
+      return;
+    }
+
     try {
       const response = await fetch(convertBlobUrlToRawUrl(url));
       const geoJsonData = await response.json();
@@ -54,6 +59,10 @@ export default function HomeScreen() {
   };
 
   const downloadKmlFile = async(name, url) => {
+    if(!url.includes("github")) {
+      onToggleSnackBar(i18n.t('home_download_prep'))
+      return;
+    }
 
     try {
       const response = await fetch(convertBlobUrlToRawUrl(url));
@@ -70,8 +79,6 @@ export default function HomeScreen() {
 
   const handleToDetail = () => {
   };
-
-  const list = useRef(null);
 
   const renderItem = ({ item }) => {
     return (
@@ -105,6 +112,16 @@ export default function HomeScreen() {
       loadIssues();
     }, 0);
   };
+
+  const [snackbarVisible, setSnackbarVisible] = useState({
+    isVisible: false,
+    message: '',
+  });
+
+  const onToggleSnackBar = (message) => setSnackbarVisible({
+    isVisible: !snackbarVisible.isVisible,
+    message: message
+  });
 
   const loadIssues = async () => {
     if (isLoading) return;
@@ -151,6 +168,11 @@ export default function HomeScreen() {
         onEndReached={loadIssues}
         onEndReachedThreshold={0.1}
       />
+      <Snackbar
+        visible={snackbarVisible.isVisible}
+        onDismiss={() => onToggleSnackBar("")}>
+        { snackbarVisible.message }
+      </Snackbar>
     </View>
   );
 };
