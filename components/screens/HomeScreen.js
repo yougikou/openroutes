@@ -85,7 +85,7 @@ export default function HomeScreen() {
       <Pressable onPress={() => {}}>
         <Card style={styles.card}  mode="elevated" key={item.id} elevation={2}>
           <Card.Cover source={{ uri: item.coverimg.uri }} />
-          <Card.Title title={item.title} left={() => <Avatar.Image size={32} source={{ uri: item.avatar }} />} />
+          <Card.Title title={item.title} left={() => <Avatar.Image size={32} source={{ uri: item.user.avatar_url }} style={{backgroundColor: '#FFFFFF'}} />} />
           <Card.Content>
             <View style={styles.row}>
               {item.distance?

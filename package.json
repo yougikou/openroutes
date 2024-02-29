@@ -20,6 +20,7 @@
     "@react-navigation/native": "^6.1.9",
     "@react-navigation/stack": "^6.3.20",
     "@shopify/flash-list": "1.6.3",
+    "@turf/turf": "^6.5.0",
     "expo": "^50.0.7",
     "expo-auth-session": "~5.4.0",
     "expo-constants": "~15.4.5",

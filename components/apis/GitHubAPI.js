@@ -1,99 +1,6 @@
 import yaml from 'js-yaml';
 import { storeData, deleteData } from "./StorageAPI";
 
-const mockData = [
-  {
-    "comments_url": "https://api.github.com/repos/yougikou/yougikou.github.io/issues/7/comments",
-    id: 2128848731,
-    "number": 7,
-    "title": "远足线路三",
-    "user": {
-        "login": "yougikou",
-        "id": 6286920,
-        "avatar_url": "https://avatars.githubusercontent.com/u/6286920?v=4"
-    },
-    "labels": [
-      {
-          "id": 6544296628,
-          "name": "hiking",
-          "description": ""
-      },
-      {
-        "id": 6544296630,
-        "name": "easy",
-        "description": ""
-      },
-      {
-        "id": 6544296631,
-        "name": "筑波山",
-        "description": ""
-      }
-    ],
-    "state": "open",
-    "comments": 0,
-    "created_at": "2024-02-11T05:39:26Z",
-    "updated_at": "2024-02-11T05:46:49Z",
-    "closed_at": null,
-    "body": "distance_km: \"4.6\"\r\nduration_hour: \"6:45\"\r\ndescription: \"这是一次晴天，面向初心者的徒步远足。\"\r\nattach_files:\r\n  - \"![img](https://github.com/yougikou/yougikou.github.io/assets/6286920/7d5807b5-368b-4cd9-9c5e-960b9ef3fa1d)\"\r\n  - \"![img](https://github.com/yougikou/yougikou.github.io/assets/6286920/7d5807b5-368b-4cd9-9c5e-960b9ef3fa1d)\"\r\n  - \"[gson](https://github.com/yougikou/yougikou.github.io/files/14231391/2024-01-18T10.42.03Z.json)\"\r\n",
-    "reactions": {
-        "total_count": 0,
-        "+1": 0,
-        "-1": 0,
-        "laugh": 0,
-        "hooray": 0,
-        "confused": 0,
-        "heart": 0,
-        "rocket": 0,
-        "eyes": 0
-    }
-  },
-  {
-    "comments_url": "https://api.github.com/repos/yougikou/yougikou.github.io/issues/7/comments",
-    id: 2128848732,
-    "number": 7,
-    "title": "开源路径测试帖：筑波山：20240123登山路",
-    "user": {
-        "login": "yougikou",
-        "id": 6286920,
-        "avatar_url": "https://avatars.githubusercontent.com/u/6286920?v=4"
-    },
-    "labels": [
-        {
-            "id": 6544296628,
-            "name": "hiking",
-            "description": ""
-        },
-        {
-          "id": 6544296629,
-          "name": "easy",
-          "description": ""
-        },
-        {
-          "id": 6544296631,
-          "name": "高尾山",
-          "description": ""
-        }
-    ],
-    "state": "open",
-    "comments": 0,
-    "created_at": "2024-02-11T05:39:26Z",
-    "updated_at": "2024-02-11T05:46:49Z",
-    "closed_at": null,
-    "body": "distance_km: \"4.6\"\r\nduration_hour: \"6:45\"\r\ndescription: \"这是一次晴天，面向初心者的徒步远足。\"\r\nattach_files:\r\n  - \"![img](https://github.com/yougikou/yougikou.github.io/assets/6286920/7d5807b5-368b-4cd9-9c5e-960b9ef3fa1d)\"\r\n  - \"![img](https://github.com/yougikou/yougikou.github.io/assets/6286920/7d5807b5-368b-4cd9-9c5e-960b9ef3fa1d)\"\r\n  - \"[gson](https://github.com/yougikou/yougikou.github.io/files/14231391/2024-01-18T10.42.03Z.json)\"\r\n",
-    "reactions": {
-        "total_count": 0,
-        "+1": 0,
-        "-1": 0,
-        "laugh": 0,
-        "hooray": 0,
-        "confused": 0,
-        "heart": 0,
-        "rocket": 0,
-        "eyes": 0
-    }
-  }
-];
-
 function parseAttachFile(text) {
   const pattern = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/;
   const matches = pattern.exec(text);
@@ -142,7 +49,7 @@ const fetchIssues = async (page = 1, perPage = 10, filters = {}, token) => {
     // const rawData = mockData;
 
     const processedData = rawData.map(issue => {
-      const bodyObj = yaml.load(issue.body);
+      const bodyObj = parseYaml(issue.body);
       return {
         distance: bodyObj.distance_km,
         duration: bodyObj.duration_hour,

@@ -10,6 +10,7 @@ import tokml from 'geojson-to-kml';
 import i18n from '../i18n/i18n';
 import { createIssue, uploadImgFile, uploadGeoJsonFile } from "../apis/GitHubAPI";
 import { readData } from "../apis/StorageAPI";
+import { extractRecordDate, calculateDistance, calculateDuration } from "../apis/GeoDataAPI";
 import Redirector from "../Redirector";
 
 export default function ShareScreen() {
@@ -30,6 +31,7 @@ export default function ShareScreen() {
   });
 
   const [isDialogVisible, setIsDialogVisible] = useState(false);
+  const [isCheckDialogVisible, setIsCheckDialogVisible] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const updateRouteData = (key, value) => {
@@ -50,6 +52,12 @@ export default function ShareScreen() {
         multiple: false,
       });
 
+      if (res.assets && res.assets.length > 0 
+        && (!res.assets[0].name.endsWith('.gpx') && !res.assets[0].name.endsWith('.kml'))) {
+        setIsCheckDialogVisible(true);
+        return;
+      }
+
       if (res.assets && res.assets.length > 0) {
         const fileUri = res.assets[0].uri;
         const fileName = res.assets[0].name;
@@ -66,9 +74,24 @@ export default function ShareScreen() {
           } else if (fileName.endsWith('.kml')) {
             convertedData = toGeoJSON.kml(xmlDoc);
           }
-          const match = /\d{4}-\d{2}-\d{2}/.exec(JSON.stringify(convertedData));
-          if (match != null && match.length > 0) {
-            updateRouteData('date', match[0]);
+
+          const dateStr = extractRecordDate(convertedData);
+          if (dateStr != null && dateStr.length > 0) {
+            updateRouteData('date', dateStr);
+          } else {
+            updateRouteData('date', "");
+          }
+          const distance = calculateDistance(convertedData);
+          if (distance > 0) {
+            updateRouteData('distance_km', distance);
+          } else {
+            updateRouteData('distance_km', "");
+          }
+          const duration = calculateDuration(convertedData);
+          if (duration > 0) {
+            updateRouteData('duration_hour', duration);
+          } else {
+            updateRouteData('duration_hour', "");
           }
           setGeojsonData(convertedData);
         };
@@ -216,6 +239,15 @@ export default function ShareScreen() {
     fetchToken();
   }, [route]);
 
+
+  const onChangeNumText=(key, value) => {
+    const regex = /^\d*\.?\d{0,1}$/;
+    
+    if (regex.test(value) || value === '') {
+      updateRouteData(key, value);
+    }
+  }
+
   return (
     <View style={styles.container}>
       <Redirector />
@@ -267,12 +299,12 @@ export default function ShareScreen() {
             </View> 
           </Surface>
           <View>
-            <TextInput style={{width: 250, height: 40, marginBottom:3}} mode="outlined" keyboardType="numeric" disabled={isProcessing}
+            <TextInput style={{width: 250, height: 40, marginBottom:3}} mode="outlined" keyboardType="decimal-pad" disabled={isProcessing}
               label={i18n.t('share_course_distance')} value={routeData.distance_km}
-              onChangeText={(value) => updateRouteData('distance_km', value)} />
-            <TextInput style={{width: 250, height: 40, marginTop: 3}} mode="outlined" keyboardType="numeric" disabled={isProcessing}
+              onChangeText={(value) => onChangeNumText('distance_km', value)} />
+            <TextInput style={{width: 250, height: 40, marginTop: 3}} mode="outlined" keyboardType="decimal-pad" disabled={isProcessing}
               label={i18n.t('share_course_duration')} value={routeData.duration_hour}
-              onChangeText={(value) => updateRouteData('duration_hour', value)} />
+              onChangeText={(value) => onChangeNumText('duration_hour', value)} />
           </View>
         </View>
         <View style={styles.inputWidget}>
@@ -300,6 +332,17 @@ export default function ShareScreen() {
           <Dialog.Actions>
             <Button onPress={() => setIsDialogVisible(false)}>{i18n.t('cancel')}</Button>
             <Button onPress={() => handleSubmit(imgUri, geojsonData)}>{i18n.t('confirm')}</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+      <Portal>
+        <Dialog visible={isCheckDialogVisible} onDismiss={() => setIsCheckDialogVisible(false)}>
+          <Dialog.Title>{i18n.t('share_filecheck_dialog_title')}</Dialog.Title>
+          <Dialog.Content>
+            <Text>{i18n.t('share_filecheck_dialog_message')}</Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setIsCheckDialogVisible(false)}>{i18n.t('confirm')}</Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>
