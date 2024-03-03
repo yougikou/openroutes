@@ -99,12 +99,24 @@ const fetchIssues = async (page = 1, perPage = 10, filters = {}, token) => {
 };
 
 const createIssue = async (routeData, token) => {
-  routeData.coverimg = `![img](${routeData.coverimg})`;
+  routeData.coverimg = routeData.coverimg?`![img](${routeData.coverimg})`:'';
   routeData.geojson = `[file](${routeData.geojson})`;
 
+  const year = routeData.date.getFullYear();
+  const month = String(routeData.date.getMonth() + 1).padStart(2, '0');
+  const day = String(routeData.date.getDate()).padStart(2, '0');
+
   const issueData = {
-    title: `${routeData.date} ${routeData.name}`,
-    body: yaml.dump(routeData),
+    title: `${year}-${month}-${day} ${routeData.name}`,
+    body: yaml.dump({
+      name: routeData.name,
+      date: routeData.date,
+      distance_km: routeData.distance_km,
+      duration_hour: routeData.duration_hour,
+      description: routeData.description?routeData.description:"",
+      coverimg: routeData.coverimg,
+      geojson: routeData.geojson,
+    }),
     labels: [routeData.type, routeData.difficulty, "route"]
   };
 

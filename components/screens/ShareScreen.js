@@ -175,8 +175,8 @@ export default function ShareScreen() {
     console.log(routeData);
     try {
       if (routeData.geojsonData === null || 
-        routeData.date.trim().length === 0 ||
-        routeData.name.trim().length === 0 ) {
+        routeData.date === null ||
+        routeData.name === null || routeData.name.trim().length === 0 ) {
         throw new Error(`Input data invalid. Geojson: ${routeData.geojsonData != null} Course date: ${routeData.date} Course name: ${routeData.name})`);
       }
 
