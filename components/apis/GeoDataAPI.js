@@ -3,9 +3,9 @@ import * as turf from '@turf/turf';
 const extractRecordDate = (geojson) => {
   const match = /\d{4}-\d{2}-\d{2}/.exec(JSON.stringify(geojson));
   if (match != null && match.length > 0) {
-    return match[0];
+    return new Date(match[0]);
   }
-  return "";
+  return null;
 }
 
 const calculateDistance = (geojson) => {

@@ -105,7 +105,7 @@ const createIssue = async (routeData, token) => {
   const issueData = {
     title: `${routeData.date} ${routeData.name}`,
     body: yaml.dump(routeData),
-    labels: [routeData.type, "route"]
+    labels: [routeData.type, routeData.difficulty, "route"]
   };
 
   const url = `https://api.github.com/repos/${process.env.EXPO_PUBLIC_GITHUB_OWNER}/${process.env.EXPO_PUBLIC_GITHUB_REPO}/issues`;
@@ -124,7 +124,6 @@ const createIssue = async (routeData, token) => {
   // }
 
   const resJson = await response.json();
-  console.log('Issue created:', resJson);
   return resJson;
 }
 

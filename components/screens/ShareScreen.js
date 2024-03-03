@@ -4,7 +4,7 @@ import { StyleSheet, View, ScrollView, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from "expo-image-picker";
-import { Appbar, Text, TextInput, Chip, Menu, SegmentedButtons, Button, Surface, Snackbar, ActivityIndicator, Portal, Dialog } from 'react-native-paper';
+import { Appbar, Text, TextInput, Chip, Menu, SegmentedButtons, Button, Surface, Snackbar, ActivityIndicator, Portal, Dialog, FAB, Modal, Card, Avatar, IconButton } from 'react-native-paper';
 import toGeoJSON from '@mapbox/togeojson';
 import tokml from 'geojson-to-kml';
 import i18n from '../i18n/i18n';
@@ -14,25 +14,30 @@ import { extractRecordDate, calculateDistance, calculateDuration } from "../apis
 import Redirector from "../Redirector";
 
 export default function ShareScreen() {
-  const [geojsonData, setGeojsonData] = useState(null);
-  const [originalFileName, setOriginalFileName] = useState(null);
-  const [fileInfo, setFileInfo] = useState(null);
-  const [imgUri, setImgUri] = useState(null);
-  const [githubToken, setGithubToken] = useState(null);
   const [routeData, setRouteData] = React.useState({
-    name: '',
+    name: null,
     type: 'hiking',
-    date: '',
-    distance_km: '',
-    duration_hour: '',
-    description: '',
-    coverimg: '',
-    geojson: '',
+    difficulty: 'easy',
+    date: null,
+    distance_km: null,
+    duration_hour: null,
+    description: null,
+    fileInfo: null,
+    originFileName: null,
+    geojsonData: null,
+    coverimg: null,
+    imgUri: null,
+    geojson: null,
   });
+  const [githubToken, setGithubToken] = useState(null);
 
-  const [isDialogVisible, setIsDialogVisible] = useState(false);
-  const [isCheckDialogVisible, setIsCheckDialogVisible] = useState(false);
+  const [isSubmitDialogVisible, setSubmitDialogVisible] = useState(false);
+  const [isCheckDialogVisible, setCheckDialogVisible] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const [dashEditModalVisible, setDashEditModalVisible] = useState(false);
+  const [descEditModalVisible, setDescEditModalVisible] = useState(false);
+
 
   const updateRouteData = (key, value) => {
     setRouteData((prevRouteData) => ({
@@ -41,7 +46,7 @@ export default function ShareScreen() {
     }));
   };
 
-  const [menuVisible, setMenuVisible] = React.useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
   const openMenu = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
 
@@ -54,15 +59,16 @@ export default function ShareScreen() {
 
       if (res.assets && res.assets.length > 0 
         && (!res.assets[0].name.endsWith('.gpx') && !res.assets[0].name.endsWith('.kml'))) {
-        setIsCheckDialogVisible(true);
+        setCheckDialogVisible(true);
         return;
       }
 
       if (res.assets && res.assets.length > 0) {
         const fileUri = res.assets[0].uri;
         const fileName = res.assets[0].name;
-        setOriginalFileName(fileName.split('.').slice(0, -1).join('.'));
-        setFileInfo(`File: ${res.assets[0].name} Size: ${res.assets[0].size/1000} kb`);
+        updateRouteData('originFileName', fileName.split('.').slice(0, -1).join('.'));
+        updateRouteData('name', fileName.split('.').slice(0, -1).join('.'));
+        updateRouteData('fileInfo', `File: ${res.assets[0].name} Size: ${res.assets[0].size/1000} kb`);
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -75,29 +81,33 @@ export default function ShareScreen() {
             convertedData = toGeoJSON.kml(xmlDoc);
           }
 
-          const dateStr = extractRecordDate(convertedData);
-          if (dateStr != null && dateStr.length > 0) {
-            updateRouteData('date', dateStr);
+          const recordDate = extractRecordDate(convertedData);
+          if (recordDate != null) {
+            updateRouteData('date', recordDate);
           } else {
-            updateRouteData('date', "");
+            updateRouteData('date', null);
           }
           const distance = calculateDistance(convertedData);
           if (distance > 0) {
             updateRouteData('distance_km', distance);
           } else {
-            updateRouteData('distance_km', "");
+            updateRouteData('distance_km', null);
           }
           const duration = calculateDuration(convertedData);
           if (duration > 0) {
             updateRouteData('duration_hour', duration);
           } else {
-            updateRouteData('duration_hour', "");
+            updateRouteData('duration_hour', null);
           }
-          setGeojsonData(convertedData);
+          updateRouteData('geojsonData', convertedData);
         };
         reader.readAsText(res.assets[0].file);
+
+        if (githubToken === null) {
+          onToggleSnackBar(i18n.t('share_file_info_warn'));
+        }
       } else {
-        setFileInfo('');
+        updateRouteData('fileInfo', null);
       }
     } catch (err) {
       console.error(err);
@@ -112,11 +122,11 @@ export default function ShareScreen() {
             "Permission Denied", 
             `Sorry, we need camera  
              roll permission to upload images.` 
-        ); 
+        );
     } else { 
         const result = await ImagePicker.launchImageLibraryAsync(); 
         if (!result.cancelled) { 
-          setImgUri(result.assets[0].uri);
+          updateRouteData('imgUri', result.assets[0].uri);
         } 
     } 
   }; 
@@ -134,7 +144,7 @@ export default function ShareScreen() {
   };
 
   const handleDownload = (fileType) => {
-    if (!geojsonData || !originalFileName) return;
+    if (!routeData.geojsonData || !routeData.originFileName) return;
 
     let data;
     let mimeType;
@@ -142,12 +152,12 @@ export default function ShareScreen() {
 
     switch(fileType) {
       case 'geojson':
-        data = JSON.stringify(geojsonData);
+        data = JSON.stringify(routeData.geojsonData);
         mimeType = 'application/json';
         fileExtension = 'geojson';
         break;
       case 'kml':
-        data = tokml(geojsonData);
+        data = tokml(routeData.geojsonData);
         mimeType = 'application/vnd.google-earth.kml+xml';
         fileExtension = 'kml';
         break;
@@ -155,25 +165,25 @@ export default function ShareScreen() {
         return;
     }
 
-    const filename = `${originalFileName}.${fileExtension}`;
+    const filename = `${routeData.originFileName}.${fileExtension}`;
     downloadFile(data, filename, mimeType);
   };
 
-  const handleSubmit = async (imgDataUri, jsonData) => {
-    setIsDialogVisible(false);
+  const handleSubmit = async () => {
+    setSubmitDialogVisible(false);
     setIsProcessing(true);
     console.log(routeData);
     try {
-      if (jsonData === null || 
+      if (routeData.geojsonData === null || 
         routeData.date.trim().length === 0 ||
         routeData.name.trim().length === 0 ) {
-        throw new Error(`Input data invalid. Geojson: ${jsonData != null} Course date: ${routeData.date} Course name: ${routeData.name})`);
+        throw new Error(`Input data invalid. Geojson: ${routeData.geojsonData != null} Course date: ${routeData.date} Course name: ${routeData.name})`);
       }
 
       if (process.env.NODE_ENV === 'production') {
         let imgURL = null;
-        if (imgDataUri && imgDataUri.includes(';') && imgDataUri.includes(',')) {
-            const parts = imgDataUri.split(';');
+        if (routeData.imgUri && routeData.imgUri.includes(';') && routeData.imgUri.includes(',')) {
+            const parts = routeData.imgUri.split(';');
             const subparts = parts[1].split(',');
             if (parts.length === 2 && subparts.length === 2) {
                 const base64Data = subparts[1];
@@ -181,7 +191,7 @@ export default function ShareScreen() {
             }
         }
 
-        const jsonURL = await uploadGeoJsonFile(jsonData);
+        const jsonURL = await uploadGeoJsonFile(routeData.geojsonData);
         setRouteData((prevRouteData) => ({
           ...prevRouteData,
           coverimg: imgURL,
@@ -203,27 +213,28 @@ export default function ShareScreen() {
       setRouteData({
         name: '',
         type: 'hiking',
-        date: '',
-        distance_km: '',
-        duration_hour: '',
+        difficulty: 'easy',
+        date: null,
+        distance_km: null,
+        duration_hour: null,
         description: '',
+        fileInfo: null,
+        originFileName: null,
+        geojsonData: null,    
         coverimg: '',
+        imgUri: null,
         geojson: '',
       });
-      setGeojsonData(null);
-      setOriginalFileName(null);
-      setFileInfo(null);
-      setImgUri(null);
     }
   }
 
-  const [snackbarVisible, setSnackbarVisible] = useState({
+  const [snackbar, setSnackbar] = useState({
     isVisible: false,
     message: '',
   });
 
-  const onToggleSnackBar = (message) => setSnackbarVisible({
-    isVisible: !snackbarVisible.isVisible,
+  const onToggleSnackBar = (message) => setSnackbar({
+    isVisible: !snackbar.isVisible,
     message: message
   });
 
@@ -239,180 +250,420 @@ export default function ShareScreen() {
     fetchToken();
   }, [route]);
 
-
-  const onChangeNumText=(key, value) => {
-    const regex = /^\d*\.?\d{0,1}$/;
-    
-    if (regex.test(value) || value === '') {
-      updateRouteData(key, value);
-    }
-  }
-
   return (
-    <View style={styles.container}>
+    <View style={{flex: 1, backgroundColor: '#fff'}}>
       <Redirector />
       <Appbar.Header elevation={2}>
         <Appbar.Content title={i18n.t('title_share')} />
         <Menu
           visible={menuVisible}
           onDismiss={closeMenu}
-          anchor={<Appbar.Action icon="file-marker" color={geojsonData ? "#4CAF50" : ""} onPress={openMenu} />}>
-          <Menu.Item onPress={() => handleDownload('geojson')} title={i18n.t('share_download_geojsonfile')} disabled={!geojsonData} />
-          <Menu.Item onPress={() => handleDownload('kml')} title={i18n.t('share_download_kmlfile')} disabled={!geojsonData} />
+          anchor={<Appbar.Action icon="file-marker" color={routeData.geojsonData ? "#4CAF50" : ""} onPress={openMenu} />}>
+          <Menu.Item onPress={() => handleDownload('geojson')} title={i18n.t('share_download_geojsonfile')} disabled={!routeData.geojsonData} />
+          <Menu.Item onPress={() => handleDownload('kml')} title={i18n.t('share_download_kmlfile')} disabled={!routeData.geojsonData} />
         </Menu>
         <Appbar.Action icon="github" color={githubToken ? "#4CAF50" : ""} />
       </Appbar.Header>
       <ScrollView>
-        <Button style={styles.fileButton} icon="routes" mode="elevated" onPress={pickFile} disabled={isProcessing}>
-          {i18n.t('share_upload_file')}
-        </Button>
-        { fileInfo? (<Chip style={styles.inputWidget} icon="file" compact="true">
-          {fileInfo}
-          { (geojsonData && !githubToken) && 
-            <><br/>You can only covert file with menu.
-              <br/>Github Token is required for creating.
-              <br/>Go to setting to authrize with your github account first.</>
-          }
-        </Chip>): <></>}        
-        <TextInput style={styles.inputWidget} mode="outlined" disabled={isProcessing}
-          label={i18n.t('share_record_date')} value={routeData.date} 
-          onChangeText={(value) => updateRouteData('date', value)} />
-        <TextInput style={styles.inputWidget} mode="outlined" disabled={isProcessing}
-          label={i18n.t('share_course_name')} value={routeData.name}
-          onChangeText={(value) => updateRouteData('name', value)} right={<TextInput.Affix text="/50" />} />
-        <SegmentedButtons style={styles.inputWidget}
-          value={routeData.type}
-          onValueChange={(value) => updateRouteData('type', value)}
-          buttons={[
-            { value: 'hiking', label: i18n.t('hiking'), disabled: isProcessing},
-            { value: 'walking', label: i18n.t('walking'), disabled: isProcessing},
-            { value: 'cycling', label: i18n.t('cycling'), disabled: isProcessing},
-          ]}
-        />
-        <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 10}}> 
-          <Surface style={styles.surface} elevation={1}>
-            <View style={styles.image}> 
-              {imgUri ? ( 
-                <Image style={styles.image} source={{ uri: imgUri }} /> 
-              ) : (<></>)} 
-              <Button style={styles.imageButton} icon="camera" onPress={pickImage} disabled={isProcessing}>{i18n.t('share_upload_img')}</Button>
-            </View> 
-          </Surface>
-          <View>
-            <TextInput style={{width: 250, height: 40, marginBottom:3}} mode="outlined" keyboardType="decimal-pad" disabled={isProcessing}
-              label={i18n.t('share_course_distance')} value={routeData.distance_km}
-              onChangeText={(value) => onChangeNumText('distance_km', value)} />
-            <TextInput style={{width: 250, height: 40, marginTop: 3}} mode="outlined" keyboardType="decimal-pad" disabled={isProcessing}
-              label={i18n.t('share_course_duration')} value={routeData.duration_hour}
-              onChangeText={(value) => onChangeNumText('duration_hour', value)} />
-          </View>
+        <RouteDashboard date={routeData.date} distance={routeData.distance_km} duration={routeData.duration_hour}/>
+        <RouteTypeButtons routeData={routeData} updateRouteData={updateRouteData} />
+        <RouteDifficultButtons routeData={routeData} updateRouteData={updateRouteData} />
+        <FileInfoBar routeData={routeData} />
+        <View style={{flexDirection: 'row', marginHorizontal: 10, marginVertical: 3}}>
+          <ImageSelector routeData={routeData} pickImage={pickImage} /> 
+          <CourseCard routeData={routeData} githubToken={githubToken} setDashEditModalVisible={setDashEditModalVisible} setDescEditModalVisible={setDescEditModalVisible} />
         </View>
-        <View style={styles.inputWidget}>
-          <TextInput style={styles.textArea} mode="outlined" disabled={isProcessing}
-            label={i18n.t('share_course_desc')} value={routeData.description}
-            onChangeText={(value) => updateRouteData('description', value)} multiline />
-        </View>
-        <Button style={styles.submitButton} icon="routes" mode="elevated"
-          onPress={() => setIsDialogVisible(true)} disabled={!geojsonData || !githubToken || !routeData.date || !routeData.name || isProcessing}>
-          {i18n.t('share_submit')}
-        </Button>
-        {isProcessing && <ActivityIndicator style={styles.activityIndicator} size="large" animating={true} color="#0000ff" />}
+        <ProgressCircle isProcessing={isProcessing} />
+        <p/><p/><p/>
       </ScrollView>
-      <Snackbar
-        visible={snackbarVisible.isVisible}
-        onDismiss={() => onToggleSnackBar("")}>
-        { snackbarVisible.message }
+      <Snackbar visible={snackbar.isVisible} onDismiss={() => onToggleSnackBar("")}>
+        {snackbar.message}
       </Snackbar>
-      <Portal>
-        <Dialog visible={isDialogVisible} onDismiss={() => setIsDialogVisible(false)}>
-          <Dialog.Title>{i18n.t('share_submit_dialog_title')}</Dialog.Title>
-          <Dialog.Content>
-            <Text>{i18n.t('share_submit_dialog_message')}</Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setIsDialogVisible(false)}>{i18n.t('cancel')}</Button>
-            <Button onPress={() => handleSubmit(imgUri, geojsonData)}>{i18n.t('confirm')}</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
-      <Portal>
-        <Dialog visible={isCheckDialogVisible} onDismiss={() => setIsCheckDialogVisible(false)}>
-          <Dialog.Title>{i18n.t('share_filecheck_dialog_title')}</Dialog.Title>
-          <Dialog.Content>
-            <Text>{i18n.t('share_filecheck_dialog_message')}</Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setIsCheckDialogVisible(false)}>{i18n.t('confirm')}</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <DashEditModal isVisible={dashEditModalVisible} setVisible={setDashEditModalVisible} routeData={routeData} updateRouteData={updateRouteData}/>
+      <DescEditModal isVisible={descEditModalVisible} setVisible={setDescEditModalVisible} routeData={routeData} updateRouteData={updateRouteData}/>
+      <FABButtons routeData={routeData} githubToken={githubToken} pickFile={pickFile}
+        setDashEditModalVisible={setDashEditModalVisible} 
+        setDescEditModalVisible={setDescEditModalVisible}
+        setSubmitDialogVisible={setSubmitDialogVisible}/>
+      <SubmitConfirmDialog isVisible={isSubmitDialogVisible} setVisible={setSubmitDialogVisible} handleSubmit={handleSubmit}/>
+      <CheckDialog isVisible={isCheckDialogVisible} setVisible={setCheckDialogVisible}/>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    lineHeight: 200,
-    backgroundColor: '#fff',
-  },
-  header: {
-    height: 100,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  inputWidget: {
-    marginTop: 3,
-    marginBottom: 3,
-    marginLeft: 10,
-    marginRight: 10,
-  },
-  textArea: {
-    height: 180
-  },
-  image: { 
-    width: 100, 
-    height: 100
-  },
-  fileButton: {
-    marginTop: 10,
-    marginBottom: 3,
-    marginLeft: 10,
-    marginRight: 10,
-  },
-  submitButton: {
-    marginTop: 3,
-    marginBottom: 10,
-    marginLeft: 10,
-    marginRight: 10,
-  },
-  imageButton: { 
-    width: 100, 
-    height: 100, 
-    borderRadius: 10,
-    position: 'absolute',
-    top: 30,
-  },
-  errorText: { 
-    color: "red", 
-    marginTop: 16, 
-  }, 
-  surface: {
-    padding: 8,
-    height: 100,
-    width: 100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin:3
-  },
-  activityIndicator: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+const ProgressCircle = ({isProcessing}) => {
+  const styles = StyleSheet.create({
+    activityIndicator: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
+
+  if (isProcessing) {
+    return (
+      <ActivityIndicator style={styles.activityIndicator} size="large" animating={true} color="#0000ff" />
+    );
+  }
+  return (<></>);
+}
+
+const FileInfoBar = ({routeData}) => {
+  if (routeData.fileInfo) {
+    return (
+      <Chip style={{flex: 1, marginHorizontal: 10, marginVertical: 3}} icon="file" compact="true">
+        {routeData.fileInfo}
+      </Chip>
+    );
+  } 
+  return (<></>);
+}
+
+const CourseCard = ({routeData, githubToken, setDashEditModalVisible, setDescEditModalVisible}) => {
+  return(
+    <Card style={{flex: 1, marginLeft: 10, marginVertical: 3}}>
+      <Card.Title title={routeData.name? routeData.name : i18n.t('share_card_no_title')} 
+        right={(props) => (routeData.geojsonData && githubToken) && <IconButton {...props} icon="view-dashboard-edit" onPress={() => setDashEditModalVisible(true)} />}/>
+      <Card.Content>
+        <Text variant="bodyMedium">{routeData.description? routeData.description : i18n.t('share_card_no_desc')}</Text>
+      </Card.Content>
+      <Card.Actions>
+        {(routeData.geojsonData && githubToken) && <IconButton icon="playlist-edit" onPress={() => setDescEditModalVisible(true)} />}
+      </Card.Actions>      
+    </Card>
+  );
+}
+
+const RouteTypeButtons = ({routeData, updateRouteData}) => {
+  return (
+    <SegmentedButtons style={{marginHorizontal: 10, marginVertical: 3}}
+      value={routeData.type}
+      onValueChange={(value) => updateRouteData('type', value)}
+      buttons={[
+        { value: 'hiking', label: i18n.t('hiking')},
+        { value: 'walking', label: i18n.t('walking')},
+        { value: 'cycling', label: i18n.t('cycling')},
+      ]}
+    />
+  );
+};
+
+const RouteDifficultButtons = ({routeData, updateRouteData}) => {
+  return (
+    <SegmentedButtons style={{marginHorizontal: 10, marginVertical: 3}}
+      value={routeData.difficulty}
+      onValueChange={(value) => updateRouteData('difficulty', value)}
+      buttons={[
+        { value: 'easy', label: i18n.t('easy')},
+        { value: 'normal', label: i18n.t('normal')},
+        { value: 'moderate', label: i18n.t('moderate')},
+        { value: 'hard', label: i18n.t('hard')},
+      ]}
+    />
+  );
+};
+
+const ImageSelector = ({routeData, pickImage}) => {
+  const styles = StyleSheet.create({
+    image: { 
+      width: 100, 
+      height: 100
+    },
+    imageButton: { 
+      width: 100, 
+      height: 100, 
+      borderRadius: 10,
+      position: 'absolute',
+      top: 30,
+    },
+    imageSurface: {
+      padding: 8,
+      height: 100,
+      width: 100,
+      alignItems: 'center',
+      justifyContent: 'center',
+      margin:3
+    },
+  });
+
+  return (
+    <Surface style={styles.imageSurface} elevation={1}>
+      <View style={styles.image}> 
+        {routeData.imgUri ? ( 
+          <Image style={styles.image} source={{ uri: routeData.imgUri }} /> 
+        ) : (<></>)} 
+        <Button style={styles.imageButton} icon="camera" onPress={pickImage}>{i18n.t('share_upload_img')}</Button>
+      </View> 
+    </Surface>
+  );
+};
+
+const FABButtons = ({routeData, githubToken, pickFile, setDashEditModalVisible, setDescEditModalVisible, setSubmitDialogVisible}) => {
+  const [state, setState] = React.useState({ open: false });
+  const onStateChange = ({ open }) => setState({ open });
+  const { open } = state;
+
+  const [buttons, setButtons] = useState([]);
+  useEffect(() => {
+    if (githubToken) {
+      if (routeData.geojsonData) {
+        if(routeData.date && routeData.distance_km && routeData.duration_hour && routeData.name && routeData.name.length > 0) {
+          setButtons([
+            {
+              icon: 'view-dashboard-edit',
+              // label: i18n.t('share_fab_edit_dashinfo'),
+              onPress: () => setDashEditModalVisible(true),
+            },
+            {
+              icon: 'playlist-edit',
+              // label: i18n.t('share_fab_edit_desc'),
+              onPress: () => setDescEditModalVisible(true),
+            },
+            {
+              icon: 'send',
+              // label: i18n.t('share_submit'),
+              onPress: () => setSubmitDialogVisible(true),
+            },
+            {
+              icon: 'file-upload',
+              // label: i18n.t('share_upload_file'),
+              onPress: () => pickFile(),
+            },
+          ]);
+        } else {
+          setButtons([
+            {
+              icon: 'view-dashboard-edit',
+              onPress: () => setDashEditModalVisible(true),
+            },
+            {
+              icon: 'playlist-edit',
+              onPress: () => setDescEditModalVisible(true),
+            },
+            {
+              icon: 'file-upload',
+              onPress: () => pickFile(),
+            },
+          ]);
+        }
+      } else {
+        setButtons([
+          {
+            icon: 'file-upload',
+            onPress: () => pickFile(),
+          },
+        ]);
+      }
+    } else {
+      setButtons([
+        {
+          icon: 'file-upload',
+          onPress: () => pickFile(),
+        },
+      ]);
+    }
+  }, [routeData]);
+
+  return (
+    <Portal>
+      <FAB.Group
+        open={open}
+        style={{position: 'absolute', bottom: 50,}}
+        icon={open ? 'minus' : 'plus'}
+        actions={buttons}
+        onStateChange={onStateChange}
+        onPress={() => {
+          if (open) {
+            // do something if the speed dial is open
+          }
+        }}
+      />
+    </Portal>
+  );
+};
+
+const DescEditModal = ({isVisible, setVisible, routeData, updateRouteData}) => {
+  const styles = StyleSheet.create({
+    textArea: {
+      flex: 1,
+    },
+    containerStyle: {
+      marginHorizontal: 24,
+      backgroundColor: 'white', 
+      padding: 20,
+      height: "80%"
+    },
+    viewContainer: {
+      flex: 1,
+    }
+  });
+
+  return (
+    <Portal>
+      <Modal visible={isVisible} onDismiss={() => setVisible(false)} contentContainerStyle={styles.containerStyle}>
+        <View style={styles.viewContainer}>
+            <TextInput mode="outlined"
+              multiline={true} 
+              numberOfLines={40}
+              style={styles.textArea}
+              label={i18n.t('share_course_desc')} value={routeData.description}
+              onChangeText={(value) => updateRouteData('description', value)} />
+        </View>
+      </Modal>
+    </Portal>
+  );
+};
+
+const DashEditModal = ({isVisible, setVisible, routeData, updateRouteData}) => {
+  const styles = StyleSheet.create({
+    containerStyle: {
+      backgroundColor: 'white', 
+      padding: 20, 
+      marginHorizontal: 24
+    },
+    input: {
+      marginTop: 3,
+      marginBottom: 3,
+      marginLeft: 10,
+      marginRight: 10,
+    }
+  });
+
+  const onChangeNumText=(key, value) => {
+    const regex = /^\d*\.?\d{0,1}$/;
+    if (regex.test(value) || value === '') {
+      updateRouteData(key, value);
+    }
+  }
+
+  return (
+    <Portal>
+      <Modal visible={isVisible} onDismiss={() => setVisible(false)} contentContainerStyle={styles.containerStyle}>
+        <TextInput style={styles.input} mode="outlined"
+          label={i18n.t('share_course_name')} value={routeData.name}
+          onChangeText={(value) => updateRouteData('name', value)} right={<TextInput.Affix text="/50" />} />
+        <TextInput style={styles.input} mode="outlined"
+          label={i18n.t('share_record_date')} value={routeData.date} 
+          onChangeText={(value) => updateRouteData('date', value)} />
+        <TextInput style={styles.input} mode="outlined" keyboardType="decimal-pad"
+          label={i18n.t('share_course_distance')} value={routeData.distance_km}
+          onChangeText={(value) => onChangeNumText('distance_km', value)} />
+        <TextInput style={styles.input} mode="outlined" keyboardType="decimal-pad"
+          label={i18n.t('share_course_duration')} value={routeData.duration_hour}
+          onChangeText={(value) => onChangeNumText('duration_hour', value)} />
+      </Modal>
+    </Portal>
+  );
+};
+
+const RouteDashboard = ({date, distance, duration}) => {
+  const styles = StyleSheet.create({
+    board: {
+      marginLeft: 10,
+      marginRight: 10,
+      flexDirection: 'row', 
+      alignItems: 'center', 
+      justifyContent: 'space-between',
+      padding: 10},
+    surface: {
+      backgroundColor: '#fff',
+      padding: 8,
+      height: 100,
+      width: 100,
+      marginHorizontal: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    divider: {
+      height: '100%',
+      width: 1,
+      backgroundColor: '#e0e0e0',
+    },
+    textStyle: {
+      fontWeight: 'bold',
+      fontSize: 16,
+      textAlign: 'center'
+    },
+    unitStyle: {
+      fontSize: 12,
+      color: '#666',
+    },
+    textBlock: {
+      height: 60,
+      justifyContent: 'center',
+    }
+  });
+
+  let year = "";
+  let month = "";
+  let day = "";
+  if (date) {
+    year = date.getFullYear();
+    month = String(date.getMonth() + 1);
+    day = String(date.getDate());
+  }
+
+  return (
+    <View style={styles.board}>
+      <View />
+      <Surface elevation={0} style={styles.surface}>
+        <Text style={styles.unitStyle}>{i18n.t('share_record_date')}</Text>
+        <View style={styles.textBlock}>
+          <Text style={styles.textStyle}>{date? `${year}\n${month}/${day}`:"Y-M/D"}</Text>
+        </View>
+      </Surface>
+      <View style={styles.divider} />
+      <Surface elevation={0} style={styles.surface}>
+        <Text style={styles.unitStyle}>{i18n.t('share_course_distance')}</Text>
+        <View style={styles.textBlock}>
+        <Text style={styles.textStyle}>{distance? distance: "#.#"} Km</Text>
+        </View>
+      </Surface>
+      <View style={styles.divider} />
+      <Surface elevation={0} style={styles.surface}>
+        <Text style={styles.unitStyle}>{i18n.t('share_course_duration')}</Text>
+        <View style={styles.textBlock}>
+        <Text style={styles.textStyle}>{duration? duration: "#.#"} H</Text>
+        </View>
+      </Surface>
+      <View />
+    </View>  
+  );
+}
+
+const SubmitConfirmDialog = ({ isVisible, setVisible, handleSubmit}) => {
+  return (
+    <Portal>
+    <Dialog visible={isVisible} onDismiss={() => setVisible(false)}>
+      <Dialog.Title>{i18n.t('share_submit_dialog_title')}</Dialog.Title>
+      <Dialog.Content>
+        <Text>{i18n.t('share_submit_dialog_message')}</Text>
+      </Dialog.Content>
+      <Dialog.Actions>
+        <Button onPress={() => setVisible(false)}>{i18n.t('cancel')}</Button>
+        <Button onPress={() => handleSubmit()}>{i18n.t('confirm')}</Button>
+      </Dialog.Actions>
+    </Dialog>
+    </Portal>
+  );
+}
+
+const CheckDialog = ({ isVisible, setVisible}) => {
+  return (
+    <Portal>
+    <Dialog visible={isVisible} onDismiss={() => setVisible(false)}>
+      <Dialog.Title>{i18n.t('share_filecheck_dialog_title')}</Dialog.Title>
+      <Dialog.Content>
+        <Text>{i18n.t('share_filecheck_dialog_message')}</Text>
+      </Dialog.Content>
+      <Dialog.Actions>
+        <Button onPress={() => setVisible(false)}>{i18n.t('confirm')}</Button>
+      </Dialog.Actions>
+    </Dialog>
+    </Portal>
+  );
+}
