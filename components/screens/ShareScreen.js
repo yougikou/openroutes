@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useRoute } from '@react-navigation/native';
-import { StyleSheet, View, ScrollView, Alert } from 'react-native';
+import { StyleSheet, View, ScrollView, Alert, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from "expo-image-picker";
-import { Appbar, Text, TextInput, Chip, Menu, SegmentedButtons, Button, Surface, Snackbar, ActivityIndicator, Portal, Dialog, FAB, Modal, Card, Avatar, IconButton } from 'react-native-paper';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Appbar, Text, TextInput, Chip, Menu, SegmentedButtons, Button, Surface, Snackbar, ActivityIndicator, Portal, Dialog, FAB, Modal, Card, HelperText, IconButton } from 'react-native-paper';
 import toGeoJSON from '@mapbox/togeojson';
 import tokml from 'geojson-to-kml';
 import i18n from '../i18n/i18n';
@@ -293,7 +294,7 @@ export default function ShareScreen() {
 
 const ProgressCircle = ({isProcessing}) => {
   const styles = StyleSheet.create({
-    activityIndicator: {
+    loadingContainer: {
       position: 'absolute',
       left: 0,
       right: 0,
@@ -301,12 +302,18 @@ const ProgressCircle = ({isProcessing}) => {
       bottom: 0,
       alignItems: 'center',
       justifyContent: 'center',
+      backgroundColor: 'rgba(255, 255, 255, 0.5)',
+      zIndex: 1000,
     },
   });
 
   if (isProcessing) {
     return (
-      <ActivityIndicator style={styles.activityIndicator} size="large" animating={true} color="#0000ff" />
+      <Portal>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" animating={true} color="#0000ff" />
+        </View>
+      </Portal>
     );
   }
   return (<></>);
@@ -540,6 +547,33 @@ const DashEditModal = ({isVisible, setVisible, routeData, updateRouteData}) => {
     }
   }
 
+  const formatDate = (date) => {
+    if(date) {
+      let formattedDate = date.getFullYear() + "-" + (date.getMonth() + 1).toString().padStart(2, '0') + "-" + date.getDate().toString().padStart(2, '0');
+      return formattedDate;
+    }
+  };
+
+  const [show, setShow] = useState(false);
+  const [dateStr, setDateStr] = useState(formatDate(routeData.date));
+
+  const onChange = (event, selectedDate) => {
+    const currentDate = selectedDate || date;
+    setShow(false);
+    updateRouteData('date', currentDate);
+  };
+
+  const onTextChange = (value) => {
+    setDateStr(value);
+    if (value != null && value.match(/^\d{4}-\d{2}-\d{2}$/) != null) {
+      updateRouteData('date', new Date(value));
+    } 
+  };
+
+  const hasDateErrors = () => {
+    return dateStr != null && dateStr.match(/^\d{4}-\d{2}-\d{2}$/) === null;
+  };
+
   return (
     <Portal>
       <Modal visible={isVisible} onDismiss={() => setVisible(false)} contentContainerStyle={styles.containerStyle}>
@@ -547,8 +581,22 @@ const DashEditModal = ({isVisible, setVisible, routeData, updateRouteData}) => {
           label={i18n.t('share_course_name')} value={routeData.name}
           onChangeText={(value) => updateRouteData('name', value)} right={<TextInput.Affix text="/50" />} />
         <TextInput style={styles.input} mode="outlined"
-          label={i18n.t('share_record_date')} value={routeData.date} 
-          onChangeText={(value) => updateRouteData('date', value)} />
+          label={i18n.t('share_record_date')} value={dateStr} 
+          onChangeText={(value) => onTextChange(value)}
+          onFocus={() => setShow(true)}
+          showSoftInputOnFocus={false} />
+        <HelperText type="error" visible={hasDateErrors()}>
+          Date is invalid!
+        </HelperText>
+        {show && (
+          <DateTimePicker
+            testID="dateTimePicker"
+            value={routeData.date}
+            mode="date"
+            display="default"
+            onChange={onChange}
+          />
+        )}
         <TextInput style={styles.input} mode="outlined" keyboardType="decimal-pad"
           label={i18n.t('share_course_distance')} value={routeData.distance_km}
           onChangeText={(value) => onChangeNumText('distance_km', value)} />
