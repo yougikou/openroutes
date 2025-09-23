@@ -2,6 +2,9 @@ import yaml from 'js-yaml';
 import { storeData, deleteData, readData } from "./StorageAPI";
 
 const GITHUB_TOKEN_KEY = 'github_access_token';
+const GITHUB_REFRESH_TOKEN_KEY = 'github_refresh_token';
+const GITHUB_TOKEN_EXPIRY_KEY = 'github_access_token_expiry';
+const GITHUB_REFRESH_TOKEN_EXPIRY_KEY = 'github_refresh_token_expiry';
 const GITHUB_USER_KEY = 'github_user_profile';
 const GITHUB_REMEMBER_PREFERENCE_KEY = 'github_token_persistence_preference';
 
@@ -143,12 +146,20 @@ const createIssue = async (routeData, token) => {
   return resJson;
 }
 
-const exchangeToken = async (cd) => {
-  const ci = 'cd019fec05aa5b74ad81';
-  const sc = '51d66fda4e5184bcc7a4ceaf99f78a8cf3acb028';
-  const ru = 'https://yougikou.github.io/openroutes/githubauth';
-  const proxyUrl = 'https://cors-anywhere.azm.workers.dev/';
+const clientId = 'cd019fec05aa5b74ad81';
+const clientSecret = '51d66fda4e5184bcc7a4ceaf99f78a8cf3acb028';
+const redirectUri = 'https://yougikou.github.io/openroutes/githubauth';
+const proxyUrl = 'https://cors-anywhere.azm.workers.dev/';
 
+const calculateExpiry = (seconds) => {
+  if (!seconds || Number.isNaN(Number(seconds))) {
+    return null;
+  }
+  const expiresAt = new Date(Date.now() + Number(seconds) * 1000);
+  return expiresAt.toISOString();
+};
+
+const exchangeToken = async (cd) => {
   try {
     const response = await fetch(proxyUrl + 'https://github.com/login/oauth/access_token', {
       method: 'POST',
@@ -156,19 +167,75 @@ const exchangeToken = async (cd) => {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json'
       },
-      body: `client_id=${ci}&client_secret=${sc}&code=${cd}&redirect_uri=${ru}`,
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code: cd,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }).toString(),
     });
 
     const data = await response.json();
+    if (data.error) {
+      throw new Error(data.error_description || data.error || 'Unknown error exchanging token');
+    }
+
     if (data.access_token) {
-      return data.access_token;
+      return {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token ?? null,
+        expiresAt: calculateExpiry(data.expires_in),
+        refreshTokenExpiresAt: calculateExpiry(data.refresh_token_expires_in),
+        tokenType: data.token_type ?? null,
+        scope: data.scope ?? null,
+      };
     }
     throw new Error('No access token found in response');
   } catch (error) {
     console.error('Token exchange error:', error);
     throw error;
   }
-}
+};
+
+const refreshGithubAccessToken = async (refreshToken) => {
+  try {
+    const response = await fetch(proxyUrl + 'https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json'
+      },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+      }).toString(),
+    });
+
+    const data = await response.json();
+    if (data.error) {
+      throw new Error(data.error_description || data.error || 'Unknown error refreshing token');
+    }
+
+    if (!data.access_token) {
+      throw new Error('No access token found in refresh response');
+    }
+
+    return {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token ?? refreshToken,
+      expiresAt: calculateExpiry(data.expires_in),
+      refreshTokenExpiresAt: calculateExpiry(data.refresh_token_expires_in),
+      tokenType: data.token_type ?? null,
+      scope: data.scope ?? null,
+    };
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    throw error;
+  }
+};
 
 const fetchAuthenticatedUser = async (token) => {
   try {
@@ -196,24 +263,53 @@ const fetchAuthenticatedUser = async (token) => {
   }
 };
 
-const saveGithubCredentials = async ({ token, user }) => {
+const saveGithubCredentials = async (
+  { token, user, refreshToken, tokenExpiry, refreshTokenExpiry },
+  options = {},
+) => {
   try {
     if (token) {
-      await storeData(GITHUB_TOKEN_KEY, token);
+      await storeData(GITHUB_TOKEN_KEY, token, options);
+    } else {
+      await deleteData(GITHUB_TOKEN_KEY, options);
     }
+
+    if (refreshToken) {
+      await storeData(GITHUB_REFRESH_TOKEN_KEY, refreshToken, options);
+    } else {
+      await deleteData(GITHUB_REFRESH_TOKEN_KEY, options);
+    }
+
+    if (tokenExpiry) {
+      await storeData(GITHUB_TOKEN_EXPIRY_KEY, tokenExpiry, options);
+    } else {
+      await deleteData(GITHUB_TOKEN_EXPIRY_KEY, options);
+    }
+
+    if (refreshTokenExpiry) {
+      await storeData(GITHUB_REFRESH_TOKEN_EXPIRY_KEY, refreshTokenExpiry, options);
+    } else {
+      await deleteData(GITHUB_REFRESH_TOKEN_EXPIRY_KEY, options);
+    }
+
     if (user) {
-      await storeData(GITHUB_USER_KEY, JSON.stringify(user));
+      await storeData(GITHUB_USER_KEY, JSON.stringify(user), options);
+    } else {
+      await deleteData(GITHUB_USER_KEY, options);
     }
   } catch (error) {
     console.error('Error saving GitHub credentials:', error);
   }
 };
 
-const loadGithubCredentials = async () => {
+const loadGithubCredentials = async (options = {}) => {
   try {
-    const [token, userString] = await Promise.all([
-      readData(GITHUB_TOKEN_KEY),
-      readData(GITHUB_USER_KEY),
+    const [token, refreshToken, tokenExpiry, refreshTokenExpiry, userString] = await Promise.all([
+      readData(GITHUB_TOKEN_KEY, options),
+      readData(GITHUB_REFRESH_TOKEN_KEY, options),
+      readData(GITHUB_TOKEN_EXPIRY_KEY, options),
+      readData(GITHUB_REFRESH_TOKEN_EXPIRY_KEY, options),
+      readData(GITHUB_USER_KEY, options),
     ]);
 
     let user = null;
@@ -227,18 +323,26 @@ const loadGithubCredentials = async () => {
 
     return {
       token: token ?? null,
+      refreshToken: refreshToken ?? null,
+      tokenExpiry: tokenExpiry ?? null,
+      refreshTokenExpiry: refreshTokenExpiry ?? null,
       user: user ?? null,
     };
   } catch (error) {
     console.error('Error loading GitHub credentials:', error);
-    return { token: null, user: null };
+    return { token: null, refreshToken: null, tokenExpiry: null, refreshTokenExpiry: null, user: null };
   }
 };
 
-const clearGithubCredentials = async () => {
+const clearGithubCredentials = async (options = {}) => {
   try {
-    await deleteData(GITHUB_TOKEN_KEY);
-    await deleteData(GITHUB_USER_KEY);
+    await Promise.all([
+      deleteData(GITHUB_TOKEN_KEY, options),
+      deleteData(GITHUB_REFRESH_TOKEN_KEY, options),
+      deleteData(GITHUB_TOKEN_EXPIRY_KEY, options),
+      deleteData(GITHUB_REFRESH_TOKEN_EXPIRY_KEY, options),
+      deleteData(GITHUB_USER_KEY, options),
+    ]);
   } catch (error) {
     console.error('Error clearing GitHub credentials:', error);
   }
@@ -315,6 +419,7 @@ export {
   fetchIssues,
   createIssue,
   exchangeToken,
+  refreshGithubAccessToken,
   fetchAuthenticatedUser,
   saveGithubCredentials,
   loadGithubCredentials,
