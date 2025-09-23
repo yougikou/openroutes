@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useRoute } from '@react-navigation/native';
 import { StyleSheet, View, ScrollView, Alert, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import * as DocumentPicker from 'expo-document-picker';
@@ -10,9 +9,9 @@ import toGeoJSON from '@mapbox/togeojson';
 import tokml from 'geojson-to-kml';
 import i18n from '../i18n/i18n';
 import { createIssue, uploadImgFile, uploadGeoJsonFile } from "../apis/GitHubAPI";
-import { readData } from "../apis/StorageAPI";
 import { extractRecordDate, calculateDistance, calculateDuration } from "../apis/GeoDataAPI";
 import Redirector from "../Redirector";
+import { useGithubAuth } from "../contexts/GithubAuthContext";
 
 export default function ShareScreen() {
   const [routeData, setRouteData] = React.useState({
@@ -30,7 +29,7 @@ export default function ShareScreen() {
     imgUri: null,
     geojson: null,
   });
-  const [githubToken, setGithubToken] = useState(null);
+  const { token: githubToken, isAuthenticated } = useGithubAuth();
 
   const [isSubmitDialogVisible, setSubmitDialogVisible] = useState(false);
   const [isCheckDialogVisible, setCheckDialogVisible] = useState(false);
@@ -104,7 +103,7 @@ export default function ShareScreen() {
         };
         reader.readAsText(res.assets[0].file);
 
-        if (githubToken === null) {
+        if (!isAuthenticated) {
           onToggleSnackBar(i18n.t('share_file_info_warn'));
         }
       } else {
@@ -182,6 +181,10 @@ export default function ShareScreen() {
       }
 
       if (process.env.NODE_ENV === 'production') {
+        if (!githubToken) {
+          onToggleSnackBar(i18n.t('share_file_info_warn'));
+          throw new Error('GitHub token is required to create an issue.');
+        }
         let imgURL = null;
         if (routeData.imgUri && routeData.imgUri.includes(';') && routeData.imgUri.includes(',')) {
             const parts = routeData.imgUri.split(';');
@@ -239,18 +242,6 @@ export default function ShareScreen() {
     message: message
   });
 
-  const route = useRoute();
-  useEffect(() => {
-    const fetchToken = async () => {
-      const token = await readData('github_access_token');
-      if (token) {
-        setGithubToken(token);
-      }
-    };
-
-    fetchToken();
-  }, [route]);
-
   return (
     <View style={{flex: 1, backgroundColor: '#fff'}}>
       <Redirector />
@@ -263,7 +254,7 @@ export default function ShareScreen() {
           <Menu.Item onPress={() => handleDownload('geojson')} title={i18n.t('share_download_geojsonfile')} disabled={!routeData.geojsonData} />
           <Menu.Item onPress={() => handleDownload('kml')} title={i18n.t('share_download_kmlfile')} disabled={!routeData.geojsonData} />
         </Menu>
-        <Appbar.Action icon="github" color={githubToken ? "#4CAF50" : ""} />
+        <Appbar.Action icon="github" color={isAuthenticated ? "#4CAF50" : "#000000"} />
       </Appbar.Header>
       <ScrollView>
         <RouteDashboard date={routeData.date} distance={routeData.distance_km} duration={routeData.duration_hour}/>
@@ -271,8 +262,8 @@ export default function ShareScreen() {
         <RouteDifficultButtons routeData={routeData} updateRouteData={updateRouteData} />
         <FileInfoBar routeData={routeData} />
         <View style={{flexDirection: 'row', marginHorizontal: 10, marginVertical: 3}}>
-          <ImageSelector routeData={routeData} pickImage={pickImage} /> 
-          <CourseCard routeData={routeData} githubToken={githubToken} setDashEditModalVisible={setDashEditModalVisible} setDescEditModalVisible={setDescEditModalVisible} />
+          <ImageSelector routeData={routeData} pickImage={pickImage} />
+          <CourseCard routeData={routeData} isAuthenticated={isAuthenticated} setDashEditModalVisible={setDashEditModalVisible} setDescEditModalVisible={setDescEditModalVisible} />
         </View>
         <ProgressCircle isProcessing={isProcessing} />
         <p/><p/><p/>
@@ -282,8 +273,8 @@ export default function ShareScreen() {
       </Snackbar>
       <DashEditModal isVisible={dashEditModalVisible} setVisible={setDashEditModalVisible} routeData={routeData} updateRouteData={updateRouteData}/>
       <DescEditModal isVisible={descEditModalVisible} setVisible={setDescEditModalVisible} routeData={routeData} updateRouteData={updateRouteData}/>
-      <FABButtons routeData={routeData} githubToken={githubToken} pickFile={pickFile}
-        setDashEditModalVisible={setDashEditModalVisible} 
+      <FABButtons routeData={routeData} isAuthenticated={isAuthenticated} pickFile={pickFile}
+        setDashEditModalVisible={setDashEditModalVisible}
         setDescEditModalVisible={setDescEditModalVisible}
         setSubmitDialogVisible={setSubmitDialogVisible}/>
       <SubmitConfirmDialog isVisible={isSubmitDialogVisible} setVisible={setSubmitDialogVisible} handleSubmit={handleSubmit}/>
@@ -330,17 +321,17 @@ const FileInfoBar = ({routeData}) => {
   return (<></>);
 }
 
-const CourseCard = ({routeData, githubToken, setDashEditModalVisible, setDescEditModalVisible}) => {
+const CourseCard = ({routeData, isAuthenticated, setDashEditModalVisible, setDescEditModalVisible}) => {
   return(
     <Card style={{flex: 1, marginLeft: 10, marginVertical: 3}}>
-      <Card.Title title={routeData.name? routeData.name : i18n.t('share_card_no_title')} 
-        right={(props) => (routeData.geojsonData && githubToken) && <IconButton {...props} icon="view-dashboard-edit" onPress={() => setDashEditModalVisible(true)} />}/>
+      <Card.Title title={routeData.name? routeData.name : i18n.t('share_card_no_title')}
+        right={(props) => (routeData.geojsonData && isAuthenticated) && <IconButton {...props} icon="view-dashboard-edit" onPress={() => setDashEditModalVisible(true)} />}/>
       <Card.Content>
         <Text variant="bodyMedium">{routeData.description? routeData.description : i18n.t('share_card_no_desc')}</Text>
       </Card.Content>
       <Card.Actions>
-        {(routeData.geojsonData && githubToken) && <IconButton icon="playlist-edit" onPress={() => setDescEditModalVisible(true)} />}
-      </Card.Actions>      
+        {(routeData.geojsonData && isAuthenticated) && <IconButton icon="playlist-edit" onPress={() => setDescEditModalVisible(true)} />}
+      </Card.Actions>
     </Card>
   );
 }
@@ -409,14 +400,14 @@ const ImageSelector = ({routeData, pickImage}) => {
   );
 };
 
-const FABButtons = ({routeData, githubToken, pickFile, setDashEditModalVisible, setDescEditModalVisible, setSubmitDialogVisible}) => {
+const FABButtons = ({routeData, isAuthenticated, pickFile, setDashEditModalVisible, setDescEditModalVisible, setSubmitDialogVisible}) => {
   const [state, setState] = React.useState({ open: false });
   const onStateChange = ({ open }) => setState({ open });
   const { open } = state;
 
   const [buttons, setButtons] = useState([]);
   useEffect(() => {
-    if (githubToken) {
+    if (isAuthenticated) {
       if (routeData.geojsonData) {
         if(routeData.date && routeData.distance_km && routeData.duration_hour && routeData.name && routeData.name.length > 0) {
           setButtons([
@@ -473,7 +464,7 @@ const FABButtons = ({routeData, githubToken, pickFile, setDashEditModalVisible, 
         },
       ]);
     }
-  }, [routeData]);
+  }, [routeData, isAuthenticated]);
 
   return (
     <Portal>

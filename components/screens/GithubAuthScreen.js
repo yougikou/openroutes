@@ -3,11 +3,12 @@ import { View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Text, Button } from 'react-native-paper';
 import i18n from '../i18n/i18n';
-import { exchangeToken } from "../apis/GitHubAPI";
-import { readData } from "../apis/StorageAPI";
+import { exchangeToken, fetchAuthenticatedUser } from "../apis/GitHubAPI";
+import { useGithubAuth } from "../contexts/GithubAuthContext";
 
 export default function GithubAuthScreen() {
   const { code: rawCode } = useLocalSearchParams();
+  const { isAuthenticated, shouldPersistToken, signIn } = useGithubAuth();
   const [tokenStatus, setTokenStatus] = useState('checking');
 
   useEffect(() => {
@@ -16,24 +17,23 @@ export default function GithubAuthScreen() {
         const codeParam = Array.isArray(rawCode) ? rawCode[0] : rawCode;
         const code = codeParam ?? null;
         if (code) {
-          await exchangeToken(code);
+          const token = await exchangeToken(code);
+          const userProfile = await fetchAuthenticatedUser(token);
+          await signIn({ token, user: userProfile, rememberToken: shouldPersistToken });
+          setTokenStatus('success');
           window.location.replace(window.location.origin + window.location.pathname);
         } else {
-          const token = await readData('github_access_token');
-          if (token) {
-            setTokenStatus('success');
-          } else {
-            setTokenStatus('failed');
-          }
+          setTokenStatus(isAuthenticated ? 'success' : 'failed');
         }
       } catch (error) {
         console.error("Error exchange Token:", error);
+        setTokenStatus('failed');
         window.location.replace(window.location.origin + window.location.pathname);
       }
     };
 
     retrieveToken();
-  }, [rawCode]);
+  }, [rawCode, isAuthenticated, shouldPersistToken, signIn]);
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
