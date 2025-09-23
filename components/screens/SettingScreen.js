@@ -28,7 +28,7 @@ export default function SettingScreen() {
   const [rememberSelection, setRememberSelection] = useState(shouldPersistToken);
   const [request, response, promptAsync] = AuthSession.useAuthRequest({
     clientId: githubClientId,
-    scopes: ['identity', 'public_repo'],
+    scopes: ['identity', 'public_repo', 'offline_access'],
     redirectUri,
   }, { authorizationEndpoint: 'https://github.com/login/oauth/authorize' });
 
@@ -43,9 +43,16 @@ export default function SettingScreen() {
       }
 
       try {
-        const exchangedToken = await exchangeToken(code);
-        const profile = await fetchAuthenticatedUser(exchangedToken);
-        await signIn({ token: exchangedToken, user: profile, rememberToken: rememberSelection });
+        const tokenPayload = await exchangeToken(code);
+        const profile = await fetchAuthenticatedUser(tokenPayload.accessToken);
+        await signIn({
+          token: tokenPayload.accessToken,
+          refreshToken: tokenPayload.refreshToken,
+          tokenExpiry: tokenPayload.expiresAt,
+          refreshTokenExpiry: tokenPayload.refreshTokenExpiresAt,
+          user: profile,
+          rememberToken: rememberSelection,
+        });
       } catch (error) {
         console.error('Failed to complete GitHub authentication:', error);
       }

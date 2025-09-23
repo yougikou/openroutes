@@ -47,9 +47,16 @@ export default function GithubAuthScreen() {
           return;
         }
 
-        const token = await exchangeToken(code);
-        const userProfile = await fetchAuthenticatedUser(token);
-        await signIn({ token, user: userProfile, rememberToken: shouldPersistToken });
+        const tokenPayload = await exchangeToken(code);
+        const userProfile = await fetchAuthenticatedUser(tokenPayload.accessToken);
+        await signIn({
+          token: tokenPayload.accessToken,
+          refreshToken: tokenPayload.refreshToken,
+          tokenExpiry: tokenPayload.expiresAt,
+          refreshTokenExpiry: tokenPayload.refreshTokenExpiresAt,
+          user: userProfile,
+          rememberToken: shouldPersistToken,
+        });
 
         if (!isCancelled) {
           setTokenStatus('success');
