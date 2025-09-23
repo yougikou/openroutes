@@ -1,19 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useLocalSearchParams } from 'expo-router';
 import { Text, Button } from 'react-native-paper';
 import i18n from '../i18n/i18n';
 import { exchangeToken } from "../apis/GitHubAPI";
 import { readData } from "../apis/StorageAPI";
 
 export default function GithubAuthScreen() {
-  const route = useRoute();
+  const { code: rawCode } = useLocalSearchParams();
   const [tokenStatus, setTokenStatus] = useState('checking');
 
   useEffect(() => {
     const retrieveToken = async () => {
       try {
-        const code = route.params?.code ?? null;
+        const codeParam = Array.isArray(rawCode) ? rawCode[0] : rawCode;
+        const code = codeParam ?? null;
         if (code) {
           await exchangeToken(code);
           window.location.replace(window.location.origin + window.location.pathname);
@@ -30,13 +31,13 @@ export default function GithubAuthScreen() {
         window.location.replace(window.location.origin + window.location.pathname);
       }
     };
-  
+
     retrieveToken();
-  }, []);
+  }, [rawCode]);
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-      <Text variant="headlineLarge" 
+      <Text variant="headlineLarge"
         style={{ alignItems: 'center', margin: 10}}>
         {tokenStatus === 'success' && i18n.t('github_auth_success')}
         {tokenStatus === 'failed' && i18n.t('github_auth_failed')}
