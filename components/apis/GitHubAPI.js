@@ -1,5 +1,9 @@
 import yaml from 'js-yaml';
-import { storeData, deleteData } from "./StorageAPI";
+import { storeData, deleteData, readData } from "./StorageAPI";
+
+const GITHUB_TOKEN_KEY = 'github_access_token';
+const GITHUB_USER_KEY = 'github_user_profile';
+const GITHUB_REMEMBER_PREFERENCE_KEY = 'github_token_persistence_preference';
 
 function parseAttachFile(text) {
   const pattern = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/;
@@ -146,7 +150,6 @@ const exchangeToken = async (cd) => {
   const proxyUrl = 'https://cors-anywhere.azm.workers.dev/';
 
   try {
-    await deleteData("github_access_token");
     const response = await fetch(proxyUrl + 'https://github.com/login/oauth/access_token', {
       method: 'POST',
       headers: {
@@ -158,14 +161,106 @@ const exchangeToken = async (cd) => {
 
     const data = await response.json();
     if (data.access_token) {
-      await storeData("github_access_token", data.access_token);
-    } else {
-      console.error('No access token found in response:', data);
+      return data.access_token;
     }
+    throw new Error('No access token found in response');
   } catch (error) {
     console.error('Token exchange error:', error);
+    throw error;
   }
 }
+
+const fetchAuthenticatedUser = async (token) => {
+  try {
+    const response = await fetch('https://api.github.com/user', {
+      headers: {
+        'Authorization': `token ${token}`,
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch user profile: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      id: data.id,
+      login: data.login,
+      avatar_url: data.avatar_url,
+      name: data.name,
+    };
+  } catch (error) {
+    console.error('Failed to fetch authenticated user:', error);
+    throw error;
+  }
+};
+
+const saveGithubCredentials = async ({ token, user }) => {
+  try {
+    if (token) {
+      await storeData(GITHUB_TOKEN_KEY, token);
+    }
+    if (user) {
+      await storeData(GITHUB_USER_KEY, JSON.stringify(user));
+    }
+  } catch (error) {
+    console.error('Error saving GitHub credentials:', error);
+  }
+};
+
+const loadGithubCredentials = async () => {
+  try {
+    const [token, userString] = await Promise.all([
+      readData(GITHUB_TOKEN_KEY),
+      readData(GITHUB_USER_KEY),
+    ]);
+
+    let user = null;
+    if (userString) {
+      try {
+        user = JSON.parse(userString);
+      } catch (error) {
+        console.error('Error parsing stored GitHub user:', error);
+      }
+    }
+
+    return {
+      token: token ?? null,
+      user: user ?? null,
+    };
+  } catch (error) {
+    console.error('Error loading GitHub credentials:', error);
+    return { token: null, user: null };
+  }
+};
+
+const clearGithubCredentials = async () => {
+  try {
+    await deleteData(GITHUB_TOKEN_KEY);
+    await deleteData(GITHUB_USER_KEY);
+  } catch (error) {
+    console.error('Error clearing GitHub credentials:', error);
+  }
+};
+
+const saveRememberPreference = async (shouldRemember) => {
+  try {
+    await storeData(GITHUB_REMEMBER_PREFERENCE_KEY, shouldRemember ? 'true' : 'false');
+  } catch (error) {
+    console.error('Error saving GitHub remember preference:', error);
+  }
+};
+
+const loadRememberPreference = async () => {
+  try {
+    const value = await readData(GITHUB_REMEMBER_PREFERENCE_KEY);
+    return value === 'true';
+  } catch (error) {
+    console.error('Error loading GitHub remember preference:', error);
+    return false;
+  }
+};
 
 
 const uploadGeoJsonFile = async (geoJsonData) => {
@@ -216,4 +311,16 @@ async function uploadImgToImgur(base64Data) {
   }
 }
 
-export { fetchIssues, createIssue, exchangeToken, uploadGeoJsonFile, uploadImgFile };
+export {
+  fetchIssues,
+  createIssue,
+  exchangeToken,
+  fetchAuthenticatedUser,
+  saveGithubCredentials,
+  loadGithubCredentials,
+  clearGithubCredentials,
+  saveRememberPreference,
+  loadRememberPreference,
+  uploadGeoJsonFile,
+  uploadImgFile,
+};

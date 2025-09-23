@@ -5,17 +5,17 @@ import { useNavigation } from '@react-navigation/native';
 import { Appbar, Card, Avatar, Chip, Searchbar, Button, Snackbar } from 'react-native-paper';
 import i18n from '../i18n/i18n';
 import { fetchIssues } from '../apis/GitHubAPI';
-import { readData } from "../apis/StorageAPI";
 import tokml from 'geojson-to-kml';
 import togpx from 'togpx';
 import Redirector from "../Redirector";
+import { useGithubAuth } from "../contexts/GithubAuthContext";
 
 export default function HomeScreen() {
-  const [githubToken, setGithubToken] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [issues, setIssues] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const { token: githubToken, isAuthenticated } = useGithubAuth();
   const filters = {
     state: 'all',
   };
@@ -128,12 +128,7 @@ export default function HomeScreen() {
     setIsLoading(true);
 
     try {
-      const token = await readData('github_access_token');
-      if (token) {
-        setGithubToken(token);
-      }
-
-      const issuesData = await fetchIssues(currentPage, perPage, filters, token);
+      const issuesData = await fetchIssues(currentPage, perPage, filters, githubToken);
       if (issuesData && issuesData.length > 0) {
         await setIssues(prevIssues => [...prevIssues, ...issuesData]);
         await setCurrentPage(prevPage => prevPage + 1);
@@ -151,7 +146,7 @@ export default function HomeScreen() {
       <Appbar.Header elevation={2}>
         <Appbar.Content title={ i18n.t('title_explore') } />
         <Appbar.Action icon="refresh" onPress={resetAndLoad} />
-        <Appbar.Action icon="github" color={githubToken ? "#4CAF50" : ""} />
+        <Appbar.Action icon="github" color={isAuthenticated ? "#4CAF50" : "#000000"} />
       </Appbar.Header>
       <View>
         <Searchbar style={styles.searchbar} mode='bar' elevation={2}
