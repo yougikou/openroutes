@@ -47,7 +47,10 @@ export default function GithubAuthScreen() {
           return;
         }
 
-        const tokenPayload = await exchangeToken(code);
+        const redirectUri = typeof window !== 'undefined'
+          ? `${window.location.origin}${window.location.pathname}`
+          : undefined;
+        const tokenPayload = await exchangeToken(code, { redirectUri });
         const userProfile = await fetchAuthenticatedUser(tokenPayload.accessToken);
         await signIn({
           token: tokenPayload.accessToken,

@@ -148,7 +148,7 @@ const createIssue = async (routeData, token) => {
 
 const clientId = 'cd019fec05aa5b74ad81';
 const clientSecret = '51d66fda4e5184bcc7a4ceaf99f78a8cf3acb028';
-const redirectUri = 'https://yougikou.github.io/openroutes/githubauth';
+const defaultRedirectUri = 'https://yougikou.github.io/openroutes/githubauth';
 const proxyUrl = 'https://cors-anywhere.azm.workers.dev/';
 
 const calculateExpiry = (seconds) => {
@@ -159,8 +159,9 @@ const calculateExpiry = (seconds) => {
   return expiresAt.toISOString();
 };
 
-const exchangeToken = async (cd) => {
+const exchangeToken = async (cd, options = {}) => {
   try {
+    const redirectUri = options.redirectUri ?? defaultRedirectUri;
     const response = await fetch(proxyUrl + 'https://github.com/login/oauth/access_token', {
       method: 'POST',
       headers: {
