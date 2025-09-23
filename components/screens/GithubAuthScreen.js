@@ -52,14 +52,35 @@ export default function GithubAuthScreen() {
           : undefined;
         const tokenPayload = await exchangeToken(code, { redirectUri });
         const userProfile = await fetchAuthenticatedUser(tokenPayload.accessToken);
-        await signIn({
+        const credentialPayload = {
           token: tokenPayload.accessToken,
           refreshToken: tokenPayload.refreshToken,
           tokenExpiry: tokenPayload.expiresAt,
           refreshTokenExpiry: tokenPayload.refreshTokenExpiresAt,
           user: userProfile,
           rememberToken: shouldPersistToken,
-        });
+        };
+
+        await signIn(credentialPayload);
+
+        if (
+          typeof window !== 'undefined' &&
+          window.opener &&
+          !window.opener.closed
+        ) {
+          try {
+            window.opener.postMessage(
+              {
+                source: 'openroutes',
+                type: 'github-auth-success',
+                payload: credentialPayload,
+              },
+              window.location.origin,
+            );
+          } catch (messageError) {
+            console.error('Failed to notify opener about GitHub auth success:', messageError);
+          }
+        }
 
         if (!isCancelled) {
           setTokenStatus('success');
