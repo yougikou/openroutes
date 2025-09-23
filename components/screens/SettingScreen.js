@@ -43,7 +43,7 @@ export default function SettingScreen() {
       }
 
       try {
-        const tokenPayload = await exchangeToken(code);
+        const tokenPayload = await exchangeToken(code, { redirectUri });
         const profile = await fetchAuthenticatedUser(tokenPayload.accessToken);
         await signIn({
           token: tokenPayload.accessToken,
