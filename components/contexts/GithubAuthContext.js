@@ -213,6 +213,40 @@ export const GithubAuthProvider = ({ children }) => {
     }
   }, [shouldPersistToken, saveRememberPreference, saveGithubCredentials, clearGithubCredentials]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const handleGithubAuthMessage = (event) => {
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+
+      const { data } = event;
+      if (!data || data.source !== 'openroutes' || data.type !== 'github-auth-success') {
+        return;
+      }
+
+      const payload = data.payload ?? {};
+      if (!payload.token || !payload.user || !payload.user.id) {
+        return;
+      }
+
+      signIn({
+        token: payload.token,
+        user: payload.user,
+        refreshToken: payload.refreshToken ?? null,
+        tokenExpiry: payload.tokenExpiry ?? null,
+        refreshTokenExpiry: payload.refreshTokenExpiry ?? null,
+        rememberToken: payload.rememberToken,
+      });
+    };
+
+    window.addEventListener('message', handleGithubAuthMessage);
+    return () => window.removeEventListener('message', handleGithubAuthMessage);
+  }, [signIn]);
+
   const signOut = useCallback(async () => {
     setToken(null);
     setRefreshToken(null);
