@@ -5,13 +5,14 @@ import { useRoute } from '@react-navigation/native';
 import { Appbar, List } from 'react-native-paper';
 import i18n from '../i18n/i18n';
 import { readData } from "../apis/StorageAPI";
+import { exchangeToken } from "../apis/GitHubAPI";
 import Redirector from "../Redirector";
 
 const useProxy = Platform.select({ web: false, default: true });
 
 const githubClientId = 'cd019fec05aa5b74ad81';
 const redirectUri = AuthSession.makeRedirectUri({
-  useProxy: true,
+  useProxy,
   path: 'openroutes/githubauth',
 });
 
@@ -24,10 +25,25 @@ export default function SettingScreen() {
   }, { authorizationEndpoint: 'https://github.com/login/oauth/authorize' });
 
   useEffect(() => {
-    if (response?.type === 'success') {
+    const handleAuthResponse = async () => {
+      if (response?.type !== 'success') {
+        return;
+      }
       const { code } = response.params;
-      console.log(code);
-    }
+      if (!code) {
+        return;
+      }
+
+      if (useProxy) {
+        await exchangeToken(code);
+        const token = await readData('github_access_token');
+        if (token) {
+          setGithubToken(token);
+        }
+      }
+    };
+
+    handleAuthResponse();
   }, [response]);
 
   const route = useRoute();
@@ -53,7 +69,14 @@ export default function SettingScreen() {
         <List.Item
           left={(props) => <List.Icon {...props} icon="github" />}
           title={i18n.t('setting_github_oauth')}
-          onPress={() => {promptAsync()}}
+          onPress={() => {
+            if (!request) {
+              return;
+            }
+            promptAsync({
+              useProxy,
+            });
+          }}
         />
       </List.Section>
     </View>
