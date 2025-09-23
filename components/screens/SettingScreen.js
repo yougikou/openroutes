@@ -34,7 +34,7 @@ export default function SettingScreen() {
 
   useEffect(() => {
     const handleAuthResponse = async () => {
-      if (!useProxy || response?.type !== 'success') {
+      if (response?.type !== 'success') {
         return;
       }
       const { code } = response.params;
