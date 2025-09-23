@@ -1,5 +1,5 @@
 import yaml from 'js-yaml';
-import { storeData, deleteData } from "./StorageAPI";
+import { storeData, deleteData, readData } from "./StorageAPI";
 
 function parseAttachFile(text) {
   const pattern = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/;
@@ -23,7 +23,16 @@ const parseYaml = (yamlString) => {
   }
 };
 
+const GITHUB_CLIENT_ID = 'cd019fec05aa5b74ad81';
+const GITHUB_CLIENT_SECRET = '51d66fda4e5184bcc7a4ceaf99f78a8cf3acb028';
+const GITHUB_REDIRECT_URI = 'https://yougikou.github.io/openroutes/githubauth';
+const GITHUB_TOKEN_ENDPOINT = 'https://github.com/login/oauth/access_token';
+const GITHUB_PROXY_URL = 'https://cors-anywhere.azm.workers.dev/';
+const GITHUB_AUTH_STORAGE_KEY = 'github_auth';
+const TOKEN_REFRESH_THRESHOLD_MS = 5 * 60 * 1000;
+
 const fetchIssues = async (page = 1, perPage = 10, filters = {}, token) => {
+  const accessToken = typeof token === 'string' ? token : token?.accessToken;
   let url = `https://api.github.com/repos/${process.env.EXPO_PUBLIC_GITHUB_OWNER}/${process.env.EXPO_PUBLIC_GITHUB_REPO}/issues?page=${page}&per_page=${perPage}&labels=route`;
   Object.keys(filters).forEach(key => {
     url += `&${key}=${filters[key]}`;
@@ -31,11 +40,12 @@ const fetchIssues = async (page = 1, perPage = 10, filters = {}, token) => {
 
   try {
     var response = null;
-    if(token != null && token.length > 0) {
+    if(accessToken != null && accessToken.length > 0) {
       response = await fetch(url, {
         headers: {
-          'Authorization': `token ${token}`,
-          'Accept': 'application/vnd.github.v3+json'
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28'
         }
       });
     } else {
@@ -99,6 +109,12 @@ const fetchIssues = async (page = 1, perPage = 10, filters = {}, token) => {
 };
 
 const createIssue = async (routeData, token) => {
+  const accessToken = typeof token === 'string' ? token : token?.accessToken;
+
+  if (!accessToken) {
+    throw new Error('GitHub access token is required to create an issue');
+  }
+
   routeData.coverimg = routeData.coverimg?`![img](${routeData.coverimg})`:'';
   routeData.geojson = `[file](${routeData.geojson})`;
 
@@ -125,8 +141,9 @@ const createIssue = async (routeData, token) => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `token ${token}`,
-      'Accept': 'application/vnd.github.v3+json',
+      'Authorization': `Bearer ${accessToken}`,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
     },
     body: JSON.stringify(issueData)
   });
@@ -139,33 +156,173 @@ const createIssue = async (routeData, token) => {
   return resJson;
 }
 
-const exchangeToken = async (cd) => {
-  const ci = 'cd019fec05aa5b74ad81';
-  const sc = '51d66fda4e5184bcc7a4ceaf99f78a8cf3acb028';
-  const ru = 'https://yougikou.github.io/openroutes/githubauth';
-  const proxyUrl = 'https://cors-anywhere.azm.workers.dev/';
-
+const persistGithubAuth = async (authPayload) => {
   try {
-    await deleteData("github_access_token");
-    const response = await fetch(proxyUrl + 'https://github.com/login/oauth/access_token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json'
-      },
-      body: `client_id=${ci}&client_secret=${sc}&code=${cd}&redirect_uri=${ru}`,
+    await storeData(GITHUB_AUTH_STORAGE_KEY, JSON.stringify(authPayload));
+  } catch (error) {
+    console.error('Failed to persist GitHub auth payload:', error);
+    throw error;
+  }
+  return authPayload;
+};
+
+const getStoredGithubAuth = async () => {
+  try {
+    const raw = await readData(GITHUB_AUTH_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw);
+    return parsed;
+  } catch (error) {
+    console.error('Failed to read GitHub auth payload:', error);
+    return null;
+  }
+};
+
+const clearGithubAuth = async () => {
+  try {
+    await deleteData(GITHUB_AUTH_STORAGE_KEY);
+  } catch (error) {
+    console.error('Failed to clear GitHub auth payload:', error);
+  }
+};
+
+const tokenRequest = async (params) => {
+  const { redirectUri, ...restParams } = params;
+  const body = new URLSearchParams({
+    client_id: GITHUB_CLIENT_ID,
+    client_secret: GITHUB_CLIENT_SECRET,
+    ...restParams,
+  });
+
+  if (restParams.grant_type !== 'refresh_token') {
+    body.append('redirect_uri', redirectUri ?? GITHUB_REDIRECT_URI);
+  }
+
+  const response = await fetch(`${GITHUB_PROXY_URL}${GITHUB_TOKEN_ENDPOINT}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json',
+    },
+    body: body.toString(),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(`GitHub token request failed with status ${response.status}`);
+  }
+
+  if (data.error) {
+    throw new Error(data.error_description || data.error);
+  }
+
+  const now = Date.now();
+  const expiresIn = data.expires_in ? Number(data.expires_in) : null;
+  const refreshTokenExpiresIn = data.refresh_token_expires_in ? Number(data.refresh_token_expires_in) : null;
+
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    tokenType: data.token_type,
+    scope: data.scope,
+    expiresAt: expiresIn ? now + expiresIn * 1000 : null,
+    refreshTokenExpiresAt: refreshTokenExpiresIn ? now + refreshTokenExpiresIn * 1000 : null,
+  };
+};
+
+const fetchGithubUser = async (accessToken) => {
+  const response = await fetch('https://api.github.com/user', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load GitHub user: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return {
+    id: data.id,
+    login: data.login,
+    avatarUrl: data.avatar_url,
+    name: data.name,
+  };
+};
+
+const exchangeToken = async (code, { redirectUri } = {}) => {
+  try {
+    const tokenData = await tokenRequest({
+      code,
+      grant_type: 'authorization_code',
+      redirectUri,
     });
 
-    const data = await response.json();
-    if (data.access_token) {
-      await storeData("github_access_token", data.access_token);
-    } else {
-      console.error('No access token found in response:', data);
-    }
+    const user = await fetchGithubUser(tokenData.accessToken);
+
+    return await persistGithubAuth({
+      ...tokenData,
+      user,
+      updatedAt: Date.now(),
+    });
   } catch (error) {
     console.error('Token exchange error:', error);
+    throw error;
   }
-}
+};
+
+const refreshGithubToken = async (currentAuth) => {
+  if (!currentAuth?.refreshToken) {
+    throw new Error('No refresh token available');
+  }
+
+  const tokenData = await tokenRequest({
+    grant_type: 'refresh_token',
+    refresh_token: currentAuth.refreshToken,
+  });
+
+  const user = await fetchGithubUser(tokenData.accessToken);
+
+  return await persistGithubAuth({
+    ...tokenData,
+    user,
+    updatedAt: Date.now(),
+  });
+};
+
+const hasValidGithubCredentials = (auth) => {
+  return Boolean(auth?.accessToken && auth?.user?.id);
+};
+
+const shouldRefreshGithubToken = (auth, thresholdMs = TOKEN_REFRESH_THRESHOLD_MS) => {
+  if (!auth?.expiresAt) {
+    return false;
+  }
+
+  return auth.expiresAt - Date.now() <= thresholdMs;
+};
+
+const ensureFreshGithubAuth = async () => {
+  let auth = await getStoredGithubAuth();
+  if (!auth) {
+    return null;
+  }
+
+  if (shouldRefreshGithubToken(auth) && auth.refreshToken) {
+    try {
+      auth = await refreshGithubToken(auth);
+    } catch (error) {
+      console.error('Failed to refresh GitHub token:', error);
+    }
+  }
+
+  return auth;
+};
 
 
 const uploadGeoJsonFile = async (geoJsonData) => {
@@ -216,4 +373,16 @@ async function uploadImgToImgur(base64Data) {
   }
 }
 
-export { fetchIssues, createIssue, exchangeToken, uploadGeoJsonFile, uploadImgFile };
+export {
+  fetchIssues,
+  createIssue,
+  exchangeToken,
+  refreshGithubToken,
+  getStoredGithubAuth,
+  clearGithubAuth,
+  hasValidGithubCredentials,
+  shouldRefreshGithubToken,
+  ensureFreshGithubAuth,
+  uploadGeoJsonFile,
+  uploadImgFile,
+};

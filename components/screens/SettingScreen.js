@@ -1,22 +1,28 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import * as AuthSession from 'expo-auth-session';
 import { View, StyleSheet, Platform } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Appbar, List } from 'react-native-paper';
 import i18n from '../i18n/i18n';
-import { readData } from "../apis/StorageAPI";
+import {
+  exchangeToken,
+  ensureFreshGithubAuth,
+  hasValidGithubCredentials,
+  refreshGithubToken,
+  shouldRefreshGithubToken,
+} from "../apis/GitHubAPI";
 import Redirector from "../Redirector";
 
 const useProxy = Platform.select({ web: false, default: true });
 
 const githubClientId = 'cd019fec05aa5b74ad81';
 const redirectUri = AuthSession.makeRedirectUri({
-  useProxy: true,
+  useProxy,
   path: 'openroutes/githubauth',
 });
 
 export default function SettingScreen() {
-  const [githubToken, setGithubToken] = useState(null);
+  const [githubAuth, setGithubAuth] = useState(null);
   const [request, response, promptAsync] = AuthSession.useAuthRequest({
     clientId: githubClientId,
     scopes: ['identity', 'public_repo'],
@@ -24,36 +30,82 @@ export default function SettingScreen() {
   }, { authorizationEndpoint: 'https://github.com/login/oauth/authorize' });
 
   useEffect(() => {
-    if (response?.type === 'success') {
+    const handleAuthResponse = async () => {
+      if (response?.type !== 'success') {
+        return;
+      }
       const { code } = response.params;
-      console.log(code);
-    }
-  }, [response]);
+      if (!code) {
+        return;
+      }
 
-  const route = useRoute();
-  useEffect(() => {
-    const fetchToken = async () => {
-      const token = await readData('github_access_token');
-      if (token) {
-        setGithubToken(token);
+      try {
+        const auth = await exchangeToken(code, { redirectUri });
+        setGithubAuth(auth);
+      } catch (error) {
+        console.error('Failed to exchange GitHub code:', error);
       }
     };
-    fetchToken();
-  }, [route]);
+
+    handleAuthResponse();
+  }, [response]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      const fetchAuth = async () => {
+        const stored = await ensureFreshGithubAuth();
+        if (isActive) {
+          setGithubAuth(stored);
+        }
+      };
+      fetchAuth();
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
+
+  useEffect(() => {
+    const refreshIfNeeded = async () => {
+      if (!githubAuth) {
+        return;
+      }
+
+      if (shouldRefreshGithubToken(githubAuth) && githubAuth.refreshToken) {
+        try {
+          const refreshed = await refreshGithubToken(githubAuth);
+          setGithubAuth(refreshed);
+        } catch (error) {
+          console.error('Failed to refresh GitHub auth token:', error);
+        }
+      }
+    };
+
+    refreshIfNeeded();
+  }, [githubAuth]);
+  const isAuthenticated = hasValidGithubCredentials(githubAuth);
 
   return (
     <View style={styles.container}>
       <Redirector />
       <Appbar.Header elevation={2}>
         <Appbar.Content title={i18n.t('title_setting')} />
-        <Appbar.Action icon="github" color={githubToken ? "#4CAF50" : ""} />
+        <Appbar.Action icon="github" color={isAuthenticated ? "#4CAF50" : ""} />
       </Appbar.Header>
       <List.Section>
         <List.Subheader>{i18n.t('setting_account')}</List.Subheader>
         <List.Item
           left={(props) => <List.Icon {...props} icon="github" />}
           title={i18n.t('setting_github_oauth')}
-          onPress={() => {promptAsync()}}
+          onPress={() => {
+            if (!request) {
+              return;
+            }
+            promptAsync({
+              useProxy,
+            });
+          }}
         />
       </List.Section>
     </View>

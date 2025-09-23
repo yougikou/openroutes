@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useRoute } from '@react-navigation/native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { StyleSheet, View, ScrollView, Alert, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import * as DocumentPicker from 'expo-document-picker';
@@ -9,8 +9,13 @@ import { Appbar, Text, TextInput, Chip, Menu, SegmentedButtons, Button, Surface,
 import toGeoJSON from '@mapbox/togeojson';
 import tokml from 'geojson-to-kml';
 import i18n from '../i18n/i18n';
-import { createIssue, uploadImgFile, uploadGeoJsonFile } from "../apis/GitHubAPI";
-import { readData } from "../apis/StorageAPI";
+import {
+  createIssue,
+  uploadImgFile,
+  uploadGeoJsonFile,
+  ensureFreshGithubAuth,
+  hasValidGithubCredentials,
+} from "../apis/GitHubAPI";
 import { extractRecordDate, calculateDistance, calculateDuration } from "../apis/GeoDataAPI";
 import Redirector from "../Redirector";
 
@@ -30,7 +35,9 @@ export default function ShareScreen() {
     imgUri: null,
     geojson: null,
   });
-  const [githubToken, setGithubToken] = useState(null);
+  const [githubAuth, setGithubAuth] = useState(null);
+
+  const isGithubAuthenticated = hasValidGithubCredentials(githubAuth);
 
   const [isSubmitDialogVisible, setSubmitDialogVisible] = useState(false);
   const [isCheckDialogVisible, setCheckDialogVisible] = useState(false);
@@ -104,7 +111,7 @@ export default function ShareScreen() {
         };
         reader.readAsText(res.assets[0].file);
 
-        if (githubToken === null) {
+        if (!isGithubAuthenticated) {
           onToggleSnackBar(i18n.t('share_file_info_warn'));
         }
       } else {
@@ -175,10 +182,18 @@ export default function ShareScreen() {
     setIsProcessing(true);
     console.log(routeData);
     try {
-      if (routeData.geojsonData === null || 
+      if (routeData.geojsonData === null ||
         routeData.date === null ||
         routeData.name === null || routeData.name.trim().length === 0 ) {
         throw new Error(`Input data invalid. Geojson: ${routeData.geojsonData != null} Course date: ${routeData.date} Course name: ${routeData.name})`);
+      }
+
+      const auth = await ensureFreshGithubAuth();
+      setGithubAuth(auth);
+
+      if (!hasValidGithubCredentials(auth)) {
+        onToggleSnackBar(i18n.t('share_file_info_warn'));
+        return;
       }
 
       if (process.env.NODE_ENV === 'production') {
@@ -199,7 +214,7 @@ export default function ShareScreen() {
           geojson: jsonURL,
         }));
 
-        await createIssue({ ...routeData, coverimg: imgURL, geojson: jsonURL }, githubToken)
+        await createIssue({ ...routeData, coverimg: imgURL, geojson: jsonURL }, auth.accessToken)
       } else {
         console.log("In development: sleep 5s")
         await new Promise(resolve => setTimeout(resolve, 5000));
@@ -239,17 +254,23 @@ export default function ShareScreen() {
     message: message
   });
 
-  const route = useRoute();
-  useEffect(() => {
-    const fetchToken = async () => {
-      const token = await readData('github_access_token');
-      if (token) {
-        setGithubToken(token);
-      }
-    };
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      const loadAuth = async () => {
+        const auth = await ensureFreshGithubAuth();
+        if (isActive) {
+          setGithubAuth(auth);
+        }
+      };
 
-    fetchToken();
-  }, [route]);
+      loadAuth();
+
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
 
   return (
     <View style={{flex: 1, backgroundColor: '#fff'}}>
@@ -263,7 +284,7 @@ export default function ShareScreen() {
           <Menu.Item onPress={() => handleDownload('geojson')} title={i18n.t('share_download_geojsonfile')} disabled={!routeData.geojsonData} />
           <Menu.Item onPress={() => handleDownload('kml')} title={i18n.t('share_download_kmlfile')} disabled={!routeData.geojsonData} />
         </Menu>
-        <Appbar.Action icon="github" color={githubToken ? "#4CAF50" : ""} />
+        <Appbar.Action icon="github" color={isGithubAuthenticated ? "#4CAF50" : ""} />
       </Appbar.Header>
       <ScrollView>
         <RouteDashboard date={routeData.date} distance={routeData.distance_km} duration={routeData.duration_hour}/>
@@ -272,7 +293,7 @@ export default function ShareScreen() {
         <FileInfoBar routeData={routeData} />
         <View style={{flexDirection: 'row', marginHorizontal: 10, marginVertical: 3}}>
           <ImageSelector routeData={routeData} pickImage={pickImage} /> 
-          <CourseCard routeData={routeData} githubToken={githubToken} setDashEditModalVisible={setDashEditModalVisible} setDescEditModalVisible={setDescEditModalVisible} />
+          <CourseCard routeData={routeData} isGithubAuthenticated={isGithubAuthenticated} setDashEditModalVisible={setDashEditModalVisible} setDescEditModalVisible={setDescEditModalVisible} />
         </View>
         <ProgressCircle isProcessing={isProcessing} />
         <p/><p/><p/>
@@ -282,8 +303,8 @@ export default function ShareScreen() {
       </Snackbar>
       <DashEditModal isVisible={dashEditModalVisible} setVisible={setDashEditModalVisible} routeData={routeData} updateRouteData={updateRouteData}/>
       <DescEditModal isVisible={descEditModalVisible} setVisible={setDescEditModalVisible} routeData={routeData} updateRouteData={updateRouteData}/>
-      <FABButtons routeData={routeData} githubToken={githubToken} pickFile={pickFile}
-        setDashEditModalVisible={setDashEditModalVisible} 
+      <FABButtons routeData={routeData} isGithubAuthenticated={isGithubAuthenticated} pickFile={pickFile}
+        setDashEditModalVisible={setDashEditModalVisible}
         setDescEditModalVisible={setDescEditModalVisible}
         setSubmitDialogVisible={setSubmitDialogVisible}/>
       <SubmitConfirmDialog isVisible={isSubmitDialogVisible} setVisible={setSubmitDialogVisible} handleSubmit={handleSubmit}/>
@@ -330,17 +351,17 @@ const FileInfoBar = ({routeData}) => {
   return (<></>);
 }
 
-const CourseCard = ({routeData, githubToken, setDashEditModalVisible, setDescEditModalVisible}) => {
+const CourseCard = ({routeData, isGithubAuthenticated, setDashEditModalVisible, setDescEditModalVisible}) => {
   return(
     <Card style={{flex: 1, marginLeft: 10, marginVertical: 3}}>
-      <Card.Title title={routeData.name? routeData.name : i18n.t('share_card_no_title')} 
-        right={(props) => (routeData.geojsonData && githubToken) && <IconButton {...props} icon="view-dashboard-edit" onPress={() => setDashEditModalVisible(true)} />}/>
+      <Card.Title title={routeData.name? routeData.name : i18n.t('share_card_no_title')}
+        right={(props) => (routeData.geojsonData && isGithubAuthenticated) && <IconButton {...props} icon="view-dashboard-edit" onPress={() => setDashEditModalVisible(true)} />}/>
       <Card.Content>
         <Text variant="bodyMedium">{routeData.description? routeData.description : i18n.t('share_card_no_desc')}</Text>
       </Card.Content>
       <Card.Actions>
-        {(routeData.geojsonData && githubToken) && <IconButton icon="playlist-edit" onPress={() => setDescEditModalVisible(true)} />}
-      </Card.Actions>      
+        {(routeData.geojsonData && isGithubAuthenticated) && <IconButton icon="playlist-edit" onPress={() => setDescEditModalVisible(true)} />}
+      </Card.Actions>
     </Card>
   );
 }
@@ -409,14 +430,14 @@ const ImageSelector = ({routeData, pickImage}) => {
   );
 };
 
-const FABButtons = ({routeData, githubToken, pickFile, setDashEditModalVisible, setDescEditModalVisible, setSubmitDialogVisible}) => {
+const FABButtons = ({routeData, isGithubAuthenticated, pickFile, setDashEditModalVisible, setDescEditModalVisible, setSubmitDialogVisible}) => {
   const [state, setState] = React.useState({ open: false });
   const onStateChange = ({ open }) => setState({ open });
   const { open } = state;
 
   const [buttons, setButtons] = useState([]);
   useEffect(() => {
-    if (githubToken) {
+    if (isGithubAuthenticated) {
       if (routeData.geojsonData) {
         if(routeData.date && routeData.distance_km && routeData.duration_hour && routeData.name && routeData.name.length > 0) {
           setButtons([
@@ -473,7 +494,7 @@ const FABButtons = ({routeData, githubToken, pickFile, setDashEditModalVisible, 
         },
       ]);
     }
-  }, [routeData]);
+  }, [routeData, isGithubAuthenticated]);
 
   return (
     <Portal>

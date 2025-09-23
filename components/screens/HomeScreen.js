@@ -1,17 +1,16 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { StyleSheet, View, Pressable } from 'react-native';
 import { FlashList } from "@shopify/flash-list";
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Appbar, Card, Avatar, Chip, Searchbar, Button, Snackbar } from 'react-native-paper';
 import i18n from '../i18n/i18n';
-import { fetchIssues } from '../apis/GitHubAPI';
-import { readData } from "../apis/StorageAPI";
+import { fetchIssues, ensureFreshGithubAuth, hasValidGithubCredentials } from '../apis/GitHubAPI';
 import tokml from 'geojson-to-kml';
 import togpx from 'togpx';
 import Redirector from "../Redirector";
 
 export default function HomeScreen() {
-  const [githubToken, setGithubToken] = useState(null);
+  const [githubAuth, setGithubAuth] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [issues, setIssues] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -128,12 +127,10 @@ export default function HomeScreen() {
     setIsLoading(true);
 
     try {
-      const token = await readData('github_access_token');
-      if (token) {
-        setGithubToken(token);
-      }
+      const auth = await ensureFreshGithubAuth();
+      setGithubAuth(auth);
 
-      const issuesData = await fetchIssues(currentPage, perPage, filters, token);
+      const issuesData = await fetchIssues(currentPage, perPage, filters, auth?.accessToken);
       if (issuesData && issuesData.length > 0) {
         await setIssues(prevIssues => [...prevIssues, ...issuesData]);
         await setCurrentPage(prevPage => prevPage + 1);
@@ -145,13 +142,31 @@ export default function HomeScreen() {
     }
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      const loadAuth = async () => {
+        const auth = await ensureFreshGithubAuth();
+        if (isActive) {
+          setGithubAuth(auth);
+        }
+      };
+
+      loadAuth();
+
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
+
   return (
     <View style={styles.container}>
       <Redirector />
       <Appbar.Header elevation={2}>
         <Appbar.Content title={ i18n.t('title_explore') } />
         <Appbar.Action icon="refresh" onPress={resetAndLoad} />
-        <Appbar.Action icon="github" color={githubToken ? "#4CAF50" : ""} />
+        <Appbar.Action icon="github" color={hasValidGithubCredentials(githubAuth) ? "#4CAF50" : ""} />
       </Appbar.Header>
       <View>
         <Searchbar style={styles.searchbar} mode='bar' elevation={2}
@@ -216,3 +231,4 @@ const styles = StyleSheet.create({
     margin: 3
   },
 });
+
