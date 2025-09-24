@@ -7,6 +7,8 @@ import {
   saveGithubCredentials,
   saveRememberPreference,
 } from '../apis/GitHubAPI';
+import { ensureValidGithubCredentials } from './githubCredentialLifecycle';
+import { persistGithubCredentials as persistGithubCredentialsHelper } from './githubCredentialPersistence';
 
 const GithubAuthContext = createContext(undefined);
 
@@ -19,70 +21,24 @@ export const GithubAuthProvider = ({ children }) => {
   const [shouldPersistToken, setShouldPersistTokenState] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
 
-  const ensureValidCredentials = useCallback(async (credentials, storageOptions) => {
-    const sanitised = {
-      token: credentials?.token ?? null,
-      refreshToken: credentials?.refreshToken ?? null,
-      tokenExpiry: credentials?.tokenExpiry ?? null,
-      refreshTokenExpiry: credentials?.refreshTokenExpiry ?? null,
-      user: credentials?.user ?? null,
-    };
+  const ensureValidCredentials = useCallback(async (credentials, storageOptions) => ensureValidGithubCredentials(
+    credentials,
+    storageOptions,
+    {
+      clearGithubCredentials,
+      refreshGithubAccessToken,
+      saveGithubCredentials,
+    },
+  ), [clearGithubCredentials, refreshGithubAccessToken, saveGithubCredentials]);
 
-    if (!sanitised.token || !sanitised.user || !sanitised.user.id) {
-      return sanitised;
-    }
-
-    const tokenExpiryTime = sanitised.tokenExpiry ? Date.parse(sanitised.tokenExpiry) : null;
-    if (tokenExpiryTime === null || Number.isNaN(tokenExpiryTime) || tokenExpiryTime > Date.now()) {
-      return sanitised;
-    }
-
-    if (!storageOptions?.persistent) {
-      await clearGithubCredentials(storageOptions);
-      return {
-        token: null,
-        refreshToken: null,
-        tokenExpiry: null,
-        refreshTokenExpiry: null,
-        user: null,
-      };
-    }
-
-    const refreshExpiryTime = sanitised.refreshTokenExpiry ? Date.parse(sanitised.refreshTokenExpiry) : null;
-    if (!sanitised.refreshToken || (refreshExpiryTime !== null && !Number.isNaN(refreshExpiryTime) && refreshExpiryTime <= Date.now())) {
-      await clearGithubCredentials(storageOptions);
-      return {
-        token: null,
-        refreshToken: null,
-        tokenExpiry: null,
-        refreshTokenExpiry: null,
-        user: null,
-      };
-    }
-
-    try {
-      const refreshed = await refreshGithubAccessToken(sanitised.refreshToken);
-      const nextCredentials = {
-        token: refreshed.accessToken,
-        refreshToken: refreshed.refreshToken ?? sanitised.refreshToken,
-        tokenExpiry: refreshed.expiresAt ?? null,
-        refreshTokenExpiry: refreshed.refreshTokenExpiresAt ?? sanitised.refreshTokenExpiry ?? null,
-        user: sanitised.user,
-      };
-      await saveGithubCredentials(nextCredentials, storageOptions);
-      return nextCredentials;
-    } catch (error) {
-      console.error('Failed to refresh stored GitHub token:', error);
-      await clearGithubCredentials(storageOptions);
-      return {
-        token: null,
-        refreshToken: null,
-        tokenExpiry: null,
-        refreshTokenExpiry: null,
-        user: null,
-      };
-    }
-  }, [clearGithubCredentials, refreshGithubAccessToken, saveGithubCredentials]);
+  const persistCredentials = useCallback(async (credentialPayload, persistent) => persistGithubCredentialsHelper(
+    credentialPayload,
+    persistent,
+    {
+      saveGithubCredentials,
+      clearGithubCredentials,
+    },
+  ), [saveGithubCredentials, clearGithubCredentials]);
 
   useEffect(() => {
     const initialise = async () => {
@@ -151,32 +107,26 @@ export const GithubAuthProvider = ({ children }) => {
       refreshTokenExpiry,
     };
 
-    if (!token || !user || !user.id) {
-      if (nextShouldPersist) {
-        await clearGithubCredentials({ persistent: false });
-      } else {
-        await clearGithubCredentials({ persistent: true });
+      if (!token || !user || !user.id) {
+        if (nextShouldPersist) {
+          await clearGithubCredentials({ persistent: false });
+        } else {
+          await clearGithubCredentials({ persistent: true });
+        }
+        return;
       }
-      return;
-    }
 
-    if (nextShouldPersist) {
-      await saveGithubCredentials(credentialPayload, { persistent: true });
-      await clearGithubCredentials({ persistent: false });
-    } else {
-      await saveGithubCredentials(credentialPayload, { persistent: false });
-      await clearGithubCredentials({ persistent: true });
-    }
-  }, [
-    token,
-    user,
-    refreshToken,
-    tokenExpiry,
-    refreshTokenExpiry,
-    clearGithubCredentials,
-    saveGithubCredentials,
-    saveRememberPreference,
-  ]);
+      await persistCredentials(credentialPayload, nextShouldPersist);
+    }, [
+      token,
+      user,
+      refreshToken,
+      tokenExpiry,
+      refreshTokenExpiry,
+      clearGithubCredentials,
+      saveRememberPreference,
+      persistCredentials,
+    ]);
 
   const signIn = useCallback(async ({
     token: nextToken,
@@ -204,14 +154,8 @@ export const GithubAuthProvider = ({ children }) => {
       refreshTokenExpiry: nextRefreshTokenExpiry,
     };
 
-    if (persist) {
-      await saveGithubCredentials(credentialPayload, { persistent: true });
-      await clearGithubCredentials({ persistent: false });
-    } else {
-      await saveGithubCredentials(credentialPayload, { persistent: false });
-      await clearGithubCredentials({ persistent: true });
-    }
-  }, [shouldPersistToken, saveRememberPreference, saveGithubCredentials, clearGithubCredentials]);
+      await persistCredentials(credentialPayload, persist);
+    }, [shouldPersistToken, saveRememberPreference, persistCredentials]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
