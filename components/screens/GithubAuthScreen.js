@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Text, Button } from 'react-native-paper';
 import i18n from '../i18n/i18n';
 import { exchangeToken, fetchAuthenticatedUser } from "../apis/GitHubAPI";
@@ -11,12 +11,10 @@ export default function GithubAuthScreen() {
   const { isAuthenticated, shouldPersistToken, hasLoaded, signIn } = useGithubAuth();
   const [tokenStatus, setTokenStatus] = useState('checking');
   const [hasHandledCode, setHasHandledCode] = useState(false);
-  const [countdown, setCountdown] = useState(null);
-  const closeWindow = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      window.close();
-    }
-  }, []);
+  const router = useRouter();
+  const navigateToSettings = useCallback(() => {
+    router.replace('/setting');
+  }, [router]);
 
   useEffect(() => {
     if (!hasLoaded || hasHandledCode) {
@@ -40,9 +38,13 @@ export default function GithubAuthScreen() {
 
         if (!code) {
           if (!isCancelled) {
-            setTokenStatus(isAuthenticated ? 'success' : 'failed');
+            const nextStatus = isAuthenticated ? 'success' : 'failed';
+            setTokenStatus(nextStatus);
             sanitizeUrl();
             setHasHandledCode(true);
+            if (nextStatus === 'success') {
+              navigateToSettings();
+            }
           }
           return;
         }
@@ -63,29 +65,11 @@ export default function GithubAuthScreen() {
 
         await signIn(credentialPayload);
 
-        if (
-          typeof window !== 'undefined' &&
-          window.opener &&
-          !window.opener.closed
-        ) {
-          try {
-            window.opener.postMessage(
-              {
-                source: 'openroutes',
-                type: 'github-auth-success',
-                payload: credentialPayload,
-              },
-              window.location.origin,
-            );
-          } catch (messageError) {
-            console.error('Failed to notify opener about GitHub auth success:', messageError);
-          }
-        }
-
         if (!isCancelled) {
           setTokenStatus('success');
           sanitizeUrl();
           setHasHandledCode(true);
+          navigateToSettings();
         }
       } catch (error) {
         console.error("Error exchange Token:", error);
@@ -102,32 +86,7 @@ export default function GithubAuthScreen() {
     return () => {
       isCancelled = true;
     };
-  }, [rawCode, isAuthenticated, shouldPersistToken, signIn, hasLoaded, hasHandledCode]);
-
-  useEffect(() => {
-    if (tokenStatus === 'success' || tokenStatus === 'failed') {
-      setCountdown(5);
-    } else {
-      setCountdown(null);
-    }
-  }, [tokenStatus]);
-
-  useEffect(() => {
-    if (countdown === null) {
-      return;
-    }
-
-    if (countdown <= 0) {
-      closeWindow();
-      return;
-    }
-
-    const timeoutId = setTimeout(() => {
-      setCountdown((prev) => (prev === null ? prev : prev - 1));
-    }, 1000);
-
-    return () => clearTimeout(timeoutId);
-  }, [countdown, closeWindow]);
+  }, [rawCode, isAuthenticated, shouldPersistToken, signIn, hasLoaded, hasHandledCode, navigateToSettings]);
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
@@ -138,12 +97,11 @@ export default function GithubAuthScreen() {
         {tokenStatus === 'success' && i18n.t('github_auth_success')}
         {tokenStatus === 'failed' && i18n.t('github_auth_failed')}
       </Text>
-      {countdown !== null && (
-        <Text variant="bodyMedium" style={{ textAlign: 'center', marginBottom: 16 }}>
-          {i18n.t('github_auth_auto_close_notice', { seconds: countdown })}
-        </Text>
+      {tokenStatus === 'failed' && (
+        <Button mode="elevated" onPress={navigateToSettings}>
+          {i18n.t('github_auth_return_to_settings')}
+        </Button>
       )}
-      <Button mode="elevated" onPress={closeWindow}>{i18n.t('github_auth_close_window')}</Button>
     </View>
   );
 }

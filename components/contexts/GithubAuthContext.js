@@ -107,26 +107,26 @@ export const GithubAuthProvider = ({ children }) => {
       refreshTokenExpiry,
     };
 
-      if (!token || !user || !user.id) {
-        if (nextShouldPersist) {
-          await clearGithubCredentials({ persistent: false });
-        } else {
-          await clearGithubCredentials({ persistent: true });
-        }
-        return;
+    if (!token || !user || !user.id) {
+      if (nextShouldPersist) {
+        await clearGithubCredentials({ persistent: false });
+      } else {
+        await clearGithubCredentials({ persistent: true });
       }
+      return;
+    }
 
-      await persistCredentials(credentialPayload, nextShouldPersist);
-    }, [
-      token,
-      user,
-      refreshToken,
-      tokenExpiry,
-      refreshTokenExpiry,
-      clearGithubCredentials,
-      saveRememberPreference,
-      persistCredentials,
-    ]);
+    await persistCredentials(credentialPayload, nextShouldPersist);
+  }, [
+    token,
+    user,
+    refreshToken,
+    tokenExpiry,
+    refreshTokenExpiry,
+    clearGithubCredentials,
+    saveRememberPreference,
+    persistCredentials,
+  ]);
 
   const signIn = useCallback(async ({
     token: nextToken,
@@ -154,42 +154,8 @@ export const GithubAuthProvider = ({ children }) => {
       refreshTokenExpiry: nextRefreshTokenExpiry,
     };
 
-      await persistCredentials(credentialPayload, persist);
-    }, [shouldPersistToken, saveRememberPreference, persistCredentials]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return undefined;
-    }
-
-    const handleGithubAuthMessage = (event) => {
-      if (event.origin !== window.location.origin) {
-        return;
-      }
-
-      const { data } = event;
-      if (!data || data.source !== 'openroutes' || data.type !== 'github-auth-success') {
-        return;
-      }
-
-      const payload = data.payload ?? {};
-      if (!payload.token || !payload.user || !payload.user.id) {
-        return;
-      }
-
-      signIn({
-        token: payload.token,
-        user: payload.user,
-        refreshToken: payload.refreshToken ?? null,
-        tokenExpiry: payload.tokenExpiry ?? null,
-        refreshTokenExpiry: payload.refreshTokenExpiry ?? null,
-        rememberToken: payload.rememberToken,
-      });
-    };
-
-    window.addEventListener('message', handleGithubAuthMessage);
-    return () => window.removeEventListener('message', handleGithubAuthMessage);
-  }, [signIn]);
+    await persistCredentials(credentialPayload, persist);
+  }, [shouldPersistToken, saveRememberPreference, persistCredentials]);
 
   const signOut = useCallback(async () => {
     setToken(null);

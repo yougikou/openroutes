@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import * as AuthSession from 'expo-auth-session';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Appbar, List, Switch } from 'react-native-paper';
@@ -71,6 +71,28 @@ export default function SettingScreen() {
     await setPersistencePreference(nextValue);
   };
 
+  const handleGithubAuthPress = useCallback(async () => {
+    if (!request) {
+      return;
+    }
+
+    try {
+      if (Platform.OS === 'web') {
+        const authUrl = await request.makeAuthUrlAsync({ useProxy });
+        if (authUrl && typeof window !== 'undefined') {
+          window.location.assign(authUrl);
+        }
+        return;
+      }
+
+      await promptAsync({
+        useProxy,
+      });
+    } catch (error) {
+      console.error('Failed to initiate GitHub authentication flow:', error);
+    }
+  }, [promptAsync, request, useProxy]);
+
   const handleSignOut = async () => {
     await signOut();
   };
@@ -92,14 +114,7 @@ export default function SettingScreen() {
           left={(props) => <List.Icon {...props} icon="github" />}
           title={i18n.t('setting_github_oauth')}
           description={githubStatusDescription}
-          onPress={() => {
-            if (!request) {
-              return;
-            }
-            promptAsync({
-              useProxy,
-            });
-          }}
+          onPress={handleGithubAuthPress}
         />
         <List.Item
           left={(props) => <List.Icon {...props} icon="content-save" />}
@@ -117,7 +132,7 @@ export default function SettingScreen() {
           left={(props) => <List.Icon {...props} icon="logout" />}
           title={i18n.t('setting_github_sign_out')}
           onPress={handleSignOut}
-          disabled={!isAuthenticated}
+          disabled={!hasLoaded}
         />
       </List.Section>
     </View>
