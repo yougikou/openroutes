@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Redirecting…</title>
+    <script>
+      (function () {
+        var storageKey = 'openroutes:pendingPathRedirect';
+        try {
+          var redirectPath = window.location.pathname + window.location.search + window.location.hash;
+          sessionStorage.setItem(storageKey, redirectPath);
+        } catch (error) {
+          console.warn('Unable to persist redirect path', error);
+        }
+        window.location.replace('/openroutes/');
+      })();
+    </script>
+  </head>
+  <body>
+    <noscript>
+      <p>This site requires JavaScript to redirect you to the correct page.</p>
+      <p><a href="/openroutes/">Continue to OpenRoutes</a></p>
+    </noscript>
+  </body>
+</html>
