@@ -218,9 +218,8 @@ const HomeScreen = (): React.ReactElement => {
       <FlashList<RouteIssue>
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
-        estimatedItemSize={100}
         data={issues}
-        onEndReached={loadIssues}
+        onEndReached={() => { void loadIssues(); }}
         onEndReachedThreshold={0.1}
       />
       <Snackbar visible={snackbar.isVisible} onDismiss={hideSnackbar}>
