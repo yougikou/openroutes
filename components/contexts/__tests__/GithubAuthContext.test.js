@@ -9,18 +9,10 @@ const mockGithubApi = {
   loadGithubCredentials: jest.fn(),
   saveGithubCredentials: jest.fn(),
   clearGithubCredentials: jest.fn(),
-  refreshGithubAccessToken: jest.fn(),
   saveRememberPreference: jest.fn(),
 };
 
 jest.mock('../../apis/GitHubAPI', () => mockGithubApi);
-
-const mockLifecycle = {
-  __esModule: true,
-  ensureValidGithubCredentials: jest.fn(),
-};
-
-jest.mock('../githubCredentialLifecycle', () => mockLifecycle);
 
 const mockPersistence = {
   __esModule: true,
@@ -36,26 +28,18 @@ const {
   loadGithubCredentials: mockLoadGithubCredentials,
   saveGithubCredentials: mockSaveGithubCredentials,
   clearGithubCredentials: mockClearGithubCredentials,
-  refreshGithubAccessToken: mockRefreshGithubAccessToken,
   saveRememberPreference: mockSaveRememberPreference,
 } = mockGithubApi;
 
-const { ensureValidGithubCredentials: mockEnsureValidGithubCredentials } = mockLifecycle;
 const { persistGithubCredentials: mockPersistGithubCredentials } = mockPersistence;
 
 const emptyCredentials = {
   token: null,
-  refreshToken: null,
-  tokenExpiry: null,
-  refreshTokenExpiry: null,
   user: null,
 };
 
 const createCredentialPayload = (overrides = {}) => ({
   token: 'access-token',
-  refreshToken: 'refresh-token',
-  tokenExpiry: '2025-01-01T00:00:00.000Z',
-  refreshTokenExpiry: '2025-02-01T00:00:00.000Z',
   user: { id: 123, login: 'openroutes-user' },
   ...overrides,
 });
@@ -87,18 +71,10 @@ describe('GithubAuthContext integration', () => {
     jest.clearAllMocks();
 
     mockLoadRememberPreference.mockResolvedValue(false);
-    mockLoadGithubCredentials.mockImplementation(async (options) => {
-      if (options?.persistent) {
-        return { ...emptyCredentials };
-      }
-      return { ...emptyCredentials };
-    });
-
-    mockEnsureValidGithubCredentials.mockImplementation(async (credentials) => credentials ?? { ...emptyCredentials });
+    mockLoadGithubCredentials.mockImplementation(async () => ({ ...emptyCredentials }));
     mockPersistGithubCredentials.mockResolvedValue(undefined);
     mockSaveGithubCredentials.mockResolvedValue(undefined);
     mockClearGithubCredentials.mockResolvedValue(undefined);
-    mockRefreshGithubAccessToken.mockResolvedValue(undefined);
     mockSaveRememberPreference.mockResolvedValue(undefined);
   });
 
@@ -115,15 +91,8 @@ describe('GithubAuthContext integration', () => {
 
     expect(latestContext.isAuthenticated).toBe(false);
     expect(latestContext.token).toBeNull();
-    expect(mockEnsureValidGithubCredentials).toHaveBeenCalledWith(
-      expect.objectContaining(emptyCredentials),
-      { persistent: false },
-      expect.objectContaining({
-        clearGithubCredentials: mockClearGithubCredentials,
-        refreshGithubAccessToken: mockRefreshGithubAccessToken,
-        saveGithubCredentials: mockSaveGithubCredentials,
-      }),
-    );
+    expect(mockLoadGithubCredentials).toHaveBeenCalledWith({ persistent: false });
+    expect(mockLoadGithubCredentials).toHaveBeenCalledWith({ persistent: true });
   });
 
   it('restores session credentials when persistence is disabled', async () => {
@@ -142,11 +111,25 @@ describe('GithubAuthContext integration', () => {
     expect(latestContext.isAuthenticated).toBe(true);
     expect(latestContext.shouldPersistToken).toBe(false);
     expect(latestContext.user).toEqual(sessionCredentials.user);
-    expect(mockEnsureValidGithubCredentials).toHaveBeenCalledWith(
-      sessionCredentials,
-      { persistent: false },
-      expect.any(Object),
-    );
+  });
+
+  it('restores persistent credentials when preference is enabled', async () => {
+    const persistentCredentials = createCredentialPayload();
+
+    mockLoadRememberPreference.mockResolvedValue(true);
+    mockLoadGithubCredentials.mockImplementation(async (options) => {
+      if (options?.persistent) {
+        return { ...persistentCredentials };
+      }
+      return { ...emptyCredentials };
+    });
+
+    renderContext();
+    await waitForContextReady();
+
+    expect(latestContext.isAuthenticated).toBe(true);
+    expect(latestContext.shouldPersistToken).toBe(true);
+    expect(latestContext.user).toEqual(persistentCredentials.user);
   });
 
   it('persists credentials to session storage when the user opts out of remembering tokens', async () => {
@@ -237,4 +220,3 @@ describe('GithubAuthContext integration', () => {
     expect(mockClearGithubCredentials).toHaveBeenNthCalledWith(2, { persistent: true });
   });
 });
-

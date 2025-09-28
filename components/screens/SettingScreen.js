@@ -1,19 +1,20 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import * as AuthSession from 'expo-auth-session';
-import { View, StyleSheet, Platform } from 'react-native';
-import { Appbar, List, Switch } from 'react-native-paper';
+import { View, StyleSheet } from 'react-native';
+import {
+  Appbar,
+  Button,
+  Dialog,
+  HelperText,
+  List,
+  Portal,
+  Switch,
+  Text,
+  TextInput,
+} from 'react-native-paper';
 import i18n from '../i18n/i18n';
-import { exchangeToken, fetchAuthenticatedUser } from "../apis/GitHubAPI";
-import Redirector from "../Redirector";
-import { useGithubAuth } from "../contexts/GithubAuthContext";
-
-const useProxy = Platform.select({ web: false, default: true });
-
-const githubClientId = 'cd019fec05aa5b74ad81';
-const redirectUri = AuthSession.makeRedirectUri({
-  useProxy,
-  path: 'openroutes/githubauth',
-});
+import { fetchAuthenticatedUser } from '../apis/GitHubAPI';
+import Redirector from '../Redirector';
+import { useGithubAuth } from '../contexts/GithubAuthContext';
 
 export default function SettingScreen() {
   const {
@@ -26,41 +27,12 @@ export default function SettingScreen() {
     signOut,
     setPersistencePreference,
   } = useGithubAuth();
+
   const [rememberSelection, setRememberSelection] = useState(shouldPersistToken);
-  const [request, response, promptAsync] = AuthSession.useAuthRequest({
-    clientId: githubClientId,
-    scopes: ['identity', 'public_repo', 'offline_access'],
-    redirectUri,
-  }, { authorizationEndpoint: 'https://github.com/login/oauth/authorize' });
-
-  useEffect(() => {
-    const handleAuthResponse = async () => {
-      if (response?.type !== 'success') {
-        return;
-      }
-      const { code } = response.params;
-      if (!code) {
-        return;
-      }
-
-      try {
-        const tokenPayload = await exchangeToken(code, { redirectUri });
-        const profile = await fetchAuthenticatedUser(tokenPayload.accessToken);
-        await signIn({
-          token: tokenPayload.accessToken,
-          refreshToken: tokenPayload.refreshToken,
-          tokenExpiry: tokenPayload.expiresAt,
-          refreshTokenExpiry: tokenPayload.refreshTokenExpiresAt,
-          user: profile,
-          rememberToken: rememberSelection,
-        });
-      } catch (error) {
-        console.error('Failed to complete GitHub authentication:', error);
-      }
-    };
-
-    handleAuthResponse();
-  }, [response, rememberSelection, signIn]);
+  const [isTokenDialogVisible, setTokenDialogVisible] = useState(false);
+  const [tokenInput, setTokenInput] = useState('');
+  const [tokenError, setTokenError] = useState(null);
+  const [isSubmittingToken, setIsSubmittingToken] = useState(false);
 
   useEffect(() => {
     setRememberSelection(shouldPersistToken);
@@ -72,27 +44,47 @@ export default function SettingScreen() {
     await setPersistencePreference(nextValue);
   };
 
-  const handleGithubAuthPress = useCallback(async () => {
-    if (!request) {
+  const openTokenDialog = () => {
+    if (isSubmittingToken) {
+      return;
+    }
+    setTokenInput('');
+    setTokenError(null);
+    setTokenDialogVisible(true);
+  };
+
+  const closeTokenDialog = () => {
+    if (isSubmittingToken) {
+      return;
+    }
+    setTokenDialogVisible(false);
+  };
+
+  const handleTokenSubmit = useCallback(async () => {
+    const trimmedToken = tokenInput.trim();
+    if (!trimmedToken) {
+      setTokenError(i18n.t('setting_github_token_error_empty'));
       return;
     }
 
+    setIsSubmittingToken(true);
+    setTokenError(null);
     try {
-      if (Platform.OS === 'web') {
-        const authUrl = await request.makeAuthUrlAsync({ useProxy });
-        if (authUrl && typeof window !== 'undefined') {
-          window.location.assign(authUrl);
-        }
-        return;
-      }
-
-      await promptAsync({
-        useProxy,
+      const profile = await fetchAuthenticatedUser(trimmedToken);
+      await signIn({
+        token: trimmedToken,
+        user: profile,
+        rememberToken: rememberSelection,
       });
+      setTokenDialogVisible(false);
+      setTokenInput('');
     } catch (error) {
-      console.error('Failed to initiate GitHub authentication flow:', error);
+      console.error('Failed to verify GitHub token:', error);
+      setTokenError(i18n.t('setting_github_token_error_invalid'));
+    } finally {
+      setIsSubmittingToken(false);
     }
-  }, [promptAsync, request, useProxy]);
+  }, [tokenInput, signIn, rememberSelection]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -115,16 +107,22 @@ export default function SettingScreen() {
       <Redirector />
       <Appbar.Header elevation={2}>
         <Appbar.Content title={i18n.t('title_setting')} />
-        <Appbar.Action icon="github" color={isAuthenticated ? "#4CAF50" : "#000000"} />
+        <Appbar.Action icon="github" color={isAuthenticated ? '#4CAF50' : '#000000'} />
       </Appbar.Header>
       <List.Section>
         <List.Subheader>{i18n.t('setting_account')}</List.Subheader>
         <List.Item
           left={(props) => <List.Icon {...props} icon="github" />}
-          title={i18n.t('setting_github_oauth')}
+          title={i18n.t('setting_github_token_action_title')}
+          description={i18n.t('setting_github_token_action_desc')}
+          descriptionNumberOfLines={3}
+          onPress={openTokenDialog}
+        />
+        <List.Item
+          left={(props) => <List.Icon {...props} icon="information" />}
+          title={i18n.t('setting_github_token_status_title')}
           description={githubStatusDescription}
-          descriptionNumberOfLines={2}
-          onPress={handleGithubAuthPress}
+          descriptionNumberOfLines={3}
         />
         <List.Item
           left={(props) => <List.Icon {...props} icon="map-search" />}
@@ -157,6 +155,48 @@ export default function SettingScreen() {
           disabled={!hasLoaded || !isAuthenticated}
         />
       </List.Section>
+
+      <Portal>
+        <Dialog visible={isTokenDialogVisible} onDismiss={closeTokenDialog}>
+          <Dialog.Title>{i18n.t('setting_github_token_dialog_title')}</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium" style={styles.dialogDescription}>
+              {i18n.t('setting_github_token_dialog_desc')}
+            </Text>
+            <TextInput
+              mode="outlined"
+              secureTextEntry
+              label={i18n.t('setting_github_token_dialog_input_label')}
+              value={tokenInput}
+              onChangeText={setTokenInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+              disabled={isSubmittingToken}
+            />
+            <HelperText type="info">
+              {i18n.t('setting_github_token_dialog_input_helper')}
+            </HelperText>
+            {tokenError && (
+              <HelperText type="error">
+                {tokenError}
+              </HelperText>
+            )}
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={closeTokenDialog} disabled={isSubmittingToken}>
+              {i18n.t('setting_github_token_dialog_cancel')}
+            </Button>
+            <Button
+              mode="contained"
+              onPress={handleTokenSubmit}
+              loading={isSubmittingToken}
+              disabled={isSubmittingToken}
+            >
+              {i18n.t('setting_github_token_dialog_submit')}
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </View>
   );
 }
@@ -166,14 +206,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  header: {
-    height: 100,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerText: {
-    color: '#fff',
-    fontSize: 20,
+  dialogDescription: {
+    marginBottom: 12,
   },
 });

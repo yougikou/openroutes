@@ -23,7 +23,6 @@
     "@shopify/flash-list": "2.0.3",
     "@turf/turf": "^7.2.0",
     "expo": "^54.0.10",
-    "expo-auth-session": "~7.0.8",
     "expo-constants": "~18.0.9",
     "expo-dev-client": "~6.0.12",
     "expo-document-picker": "~14.0.7",
