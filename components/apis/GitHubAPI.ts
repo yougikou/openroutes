@@ -92,6 +92,21 @@ export interface RouteFilters {
   [key: string]: string | number | undefined;
 }
 
+const fallbackRepoInfo = (() => {
+  const repoSlug = process.env.GITHUB_REPOSITORY ?? '';
+  const parts = repoSlug.split('/');
+  return {
+    owner: parts[0] ?? '',
+    repo: parts[1] ?? '',
+  };
+})();
+
+const resolveRepoInfo = () => {
+  const owner = process.env.EXPO_PUBLIC_GITHUB_OWNER ?? fallbackRepoInfo.owner;
+  const repo = process.env.EXPO_PUBLIC_GITHUB_REPO ?? fallbackRepoInfo.repo;
+  return { owner, repo };
+};
+
 const parseAttachFile = (text?: string | null): IssueAttachment => {
   if (!text) {
     return {};
@@ -124,11 +139,11 @@ export const fetchIssues = async (
   filters: RouteFilters = {},
   token?: string | null,
 ): Promise<RouteIssue[]> => {
-  const owner = process.env.EXPO_PUBLIC_GITHUB_OWNER;
-  const repo = process.env.EXPO_PUBLIC_GITHUB_REPO;
+  const { owner, repo } = resolveRepoInfo();
 
   if (!owner || !repo) {
-    throw new Error('GitHub repository information is missing in environment variables.');
+    console.warn('GitHub repository information is missing in environment variables.');
+    return [];
   }
 
   const searchParams = new URLSearchParams({
@@ -195,8 +210,7 @@ export const fetchIssues = async (
 };
 
 export const createIssue = async (routeData: RouteDraft, token: string): Promise<unknown> => {
-  const owner = process.env.EXPO_PUBLIC_GITHUB_OWNER;
-  const repo = process.env.EXPO_PUBLIC_GITHUB_REPO;
+  const { owner, repo } = resolveRepoInfo();
 
   if (!owner || !repo) {
     throw new Error('GitHub repository information is missing in environment variables.');
