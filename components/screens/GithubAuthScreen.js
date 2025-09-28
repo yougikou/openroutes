@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Text, Button } from 'react-native-paper';
@@ -8,7 +8,7 @@ import { useGithubAuth } from "../contexts/GithubAuthContext";
 
 export default function GithubAuthScreen() {
   const { code: rawCode } = useLocalSearchParams();
-  const { isAuthenticated, shouldPersistToken, hasLoaded, signIn } = useGithubAuth();
+  const { isAuthenticated, shouldPersistToken, hasLoaded, signIn, user } = useGithubAuth();
   const [tokenStatus, setTokenStatus] = useState('checking');
   const [hasHandledCode, setHasHandledCode] = useState(false);
   const router = useRouter();
@@ -88,6 +88,21 @@ export default function GithubAuthScreen() {
     };
   }, [rawCode, isAuthenticated, shouldPersistToken, signIn, hasLoaded, hasHandledCode, navigateToSettings]);
 
+  const successDetailMessage = useMemo(() => {
+    if (tokenStatus !== 'success') {
+      return null;
+    }
+
+    if (user?.login && user?.id) {
+      return i18n.t('github_auth_success_detail_identified', {
+        login: user.login,
+        id: user.id,
+      });
+    }
+
+    return i18n.t('github_auth_success_detail');
+  }, [tokenStatus, user]);
+
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
       <Text
@@ -97,6 +112,13 @@ export default function GithubAuthScreen() {
         {tokenStatus === 'success' && i18n.t('github_auth_success')}
         {tokenStatus === 'failed' && i18n.t('github_auth_failed')}
       </Text>
+      {tokenStatus === 'success' && (
+        <Text
+          variant="bodyLarge"
+          style={{ textAlign: 'center', marginHorizontal: 10 }}>
+          {successDetailMessage}
+        </Text>
+      )}
       {tokenStatus === 'failed' && (
         <Button mode="elevated" onPress={navigateToSettings}>
           {i18n.t('github_auth_return_to_settings')}

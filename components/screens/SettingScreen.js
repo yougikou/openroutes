@@ -18,6 +18,7 @@ const redirectUri = AuthSession.makeRedirectUri({
 export default function SettingScreen() {
   const {
     user,
+    token,
     isAuthenticated,
     shouldPersistToken,
     hasLoaded,
@@ -101,6 +102,14 @@ export default function SettingScreen() {
     ? i18n.t('setting_github_status_signed_in', { login: user?.login ?? 'unknown', id: user?.id ?? '-' })
     : i18n.t('setting_github_status_signed_out');
 
+  const routeUsageDescription = isAuthenticated
+    ? i18n.t('setting_github_usage_authenticated', { login: user?.login ?? 'unknown', id: user?.id ?? '-' })
+    : i18n.t('setting_github_usage_signed_out');
+
+  const tokenStorageDescription = token
+    ? i18n.t('setting_github_access_token_desc_signed_in', { login: user?.login ?? 'unknown' })
+    : i18n.t('setting_github_access_token_desc_signed_out');
+
   return (
     <View style={styles.container}>
       <Redirector />
@@ -114,7 +123,20 @@ export default function SettingScreen() {
           left={(props) => <List.Icon {...props} icon="github" />}
           title={i18n.t('setting_github_oauth')}
           description={githubStatusDescription}
+          descriptionNumberOfLines={2}
           onPress={handleGithubAuthPress}
+        />
+        <List.Item
+          left={(props) => <List.Icon {...props} icon="map-search" />}
+          title={i18n.t('setting_github_usage_title')}
+          description={routeUsageDescription}
+          descriptionNumberOfLines={3}
+        />
+        <List.Item
+          left={(props) => <List.Icon {...props} icon="key-variant" />}
+          title={i18n.t('setting_github_access_token_title')}
+          description={tokenStorageDescription}
+          descriptionNumberOfLines={3}
         />
         <List.Item
           left={(props) => <List.Icon {...props} icon="content-save" />}
@@ -132,7 +154,7 @@ export default function SettingScreen() {
           left={(props) => <List.Icon {...props} icon="logout" />}
           title={i18n.t('setting_github_sign_out')}
           onPress={handleSignOut}
-          disabled={!hasLoaded}
+          disabled={!hasLoaded || !isAuthenticated}
         />
       </List.Section>
     </View>
