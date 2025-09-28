@@ -92,8 +92,6 @@ export default function AppLayout() {
               ),
             }}
           />
-          {/* hidden route */}
-          <Tabs.Screen name="githubauth" options={{ href: null }} />
           <Tabs.Screen name="detail" options={{ href: null }} />
         </Tabs>
       </GithubAuthProvider>
