@@ -1,0 +1,68 @@
+import React, { useEffect, useState } from 'react';
+import { View } from 'react-native';
+import { useRoute } from '@react-navigation/native';
+import { Text, Button } from 'react-native-paper';
+import i18n from '../i18n/i18n';
+import { exchangeToken } from '../apis/GitHubAPI';
+import { readData } from '../apis/StorageAPI';
+
+type TokenStatus = 'checking' | 'success' | 'failed';
+
+type RouteParams = {
+  code?: string;
+};
+
+const GithubAuthScreen = (): React.ReactElement => {
+  const route = useRoute();
+  const [tokenStatus, setTokenStatus] = useState<TokenStatus>('checking');
+
+  useEffect(() => {
+    const retrieveToken = async () => {
+      try {
+        const params = (route.params ?? {}) as RouteParams;
+        const code = params.code ?? null;
+        if (code) {
+          await exchangeToken(code);
+          if (typeof window !== 'undefined') {
+            window.location.replace(window.location.origin + window.location.pathname);
+          }
+        } else {
+          const token = await readData('github_access_token');
+          if (token) {
+            setTokenStatus('success');
+          } else {
+            setTokenStatus('failed');
+          }
+        }
+      } catch (error) {
+        console.error('Error exchange Token:', error);
+        if (typeof window !== 'undefined') {
+          window.location.replace(window.location.origin + window.location.pathname);
+        }
+      }
+    };
+
+    retrieveToken();
+  }, [route.params]);
+
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+      <Text variant="headlineLarge" style={{ alignItems: 'center', margin: 10 }}>
+        {tokenStatus === 'success' && i18n.t('github_auth_success')}
+        {tokenStatus === 'failed' && i18n.t('github_auth_failed')}
+      </Text>
+      <Button
+        mode="elevated"
+        onPress={() => {
+          if (typeof window !== 'undefined') {
+            window.close();
+          }
+        }}
+      >
+        Close
+      </Button>
+    </View>
+  );
+};
+
+export default GithubAuthScreen;
