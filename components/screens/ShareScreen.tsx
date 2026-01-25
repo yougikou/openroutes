@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRoute } from '@react-navigation/native';
-import { StyleSheet, View, ScrollView, Alert, Platform, useWindowDimensions, Pressable } from 'react-native';
+import { StyleSheet, View, ScrollView, Alert, Platform, Pressable, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from "expo-image-picker";
@@ -14,7 +14,10 @@ import { createIssue, uploadImgFile, uploadGeoJsonFile } from "../apis/GitHubAPI
 import { readData } from "../apis/StorageAPI";
 import { extractRecordDate, calculateDistance, calculateDuration } from "../apis/GeoDataAPI";
 import Redirector from "../Redirector";
+import { DOMParser } from '@xmldom/xmldom';
+import { downloadFile } from '../../utils/FileHelper';
 
+// ... RouteData type definitions
 type RouteData = {
   name: string | null;
   type: 'hiking' | 'walking' | 'cycling';
@@ -30,11 +33,6 @@ type RouteData = {
   imgUri: string | null;
   geojson: string | null;
 };
-
-interface SnackbarState {
-  isVisible: boolean;
-  message: string;
-}
 
 const initialRouteData: RouteData = {
   name: null,
@@ -55,7 +53,8 @@ const initialRouteData: RouteData = {
 export default function ShareScreen() {
   const theme = useTheme();
   const { width } = useWindowDimensions();
-  const containerWidth = Math.min(width, 800);
+  const isDesktop = width >= 1024;
+  const contentMaxWidth = isDesktop ? 1000 : 800; // Slightly tighter for form content
 
   const [routeData, setRouteData] = React.useState<RouteData>(initialRouteData);
   const [githubToken, setGithubToken] = useState<string | null>(null);
@@ -121,11 +120,8 @@ export default function ShareScreen() {
       };
 
       const parseFile = (fileContent: string) => {
-        if (typeof DOMParser === 'undefined') {
-          console.warn('DOMParser is not available on this platform.');
-          return;
-        }
-        const xmlDoc = new DOMParser().parseFromString(fileContent, 'text/xml');
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(fileContent, 'text/xml');
         let convertedData: FeatureCollection | null = null;
         if (asset.name.endsWith('.gpx')) {
           convertedData = toGeoJSON.gpx(xmlDoc) as FeatureCollection;
@@ -135,7 +131,7 @@ export default function ShareScreen() {
         handleGeoJson(convertedData);
       };
 
-      if (asset.file) {
+      if (Platform.OS === 'web' && asset.file) {
         const reader = new FileReader();
         reader.onload = (event) => {
           const result = event.target?.result;
@@ -145,9 +141,15 @@ export default function ShareScreen() {
         };
         reader.readAsText(asset.file);
       } else {
-        const response = await fetch(asset.uri);
-        const fileContent = await response.text();
-        parseFile(fileContent);
+        // Native or URI available
+        try {
+          const response = await fetch(asset.uri);
+          const fileContent = await response.text();
+          parseFile(fileContent);
+        } catch (e) {
+          console.error("Failed to read file", e);
+          onToggleSnackBar("Error reading file");
+        }
       }
 
       if (githubToken === null) {
@@ -174,30 +176,14 @@ export default function ShareScreen() {
     }
   };
 
-  const downloadFile = async (data, filename, mimeType) => {
-    if (typeof document === 'undefined') {
-      console.warn('File download is only supported on web.');
-      return;
-    }
-    const blob = new Blob([data], { type: mimeType });
-    const href = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = href;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(href);
-  };
-
-  const handleDownload = (fileType) => {
+  const handleDownload = async (fileType) => {
     if (!routeData.geojsonData || !routeData.originFileName) return;
 
     let data;
     let mimeType;
     let fileExtension;
 
-    switch(fileType) {
+    switch (fileType) {
       case 'geojson':
         data = JSON.stringify(routeData.geojsonData);
         mimeType = 'application/json';
@@ -212,8 +198,8 @@ export default function ShareScreen() {
         return;
     }
 
-    const filename = `${routeData.originFileName}.${fileExtension}`;
-    downloadFile(data, filename, mimeType);
+    const filename = `${routeData.originFileName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.${fileExtension}`;
+    await downloadFile(data, filename, mimeType);
   };
 
   const handleSubmit = async () => {
@@ -221,21 +207,21 @@ export default function ShareScreen() {
     setIsProcessing(true);
     console.log(routeData);
     try {
-      if (routeData.geojsonData === null || 
+      if (routeData.geojsonData === null ||
         routeData.date === null ||
-        routeData.name === null || routeData.name.trim().length === 0 ) {
+        routeData.name === null || routeData.name.trim().length === 0) {
         throw new Error(`Input data invalid. Geojson: ${routeData.geojsonData != null} Course date: ${routeData.date} Course name: ${routeData.name})`);
       }
 
       if (process.env.NODE_ENV === 'production') {
         let imgURL = null;
         if (routeData.imgUri && routeData.imgUri.includes(';') && routeData.imgUri.includes(',')) {
-            const parts = routeData.imgUri.split(';');
-            const subparts = parts[1].split(',');
-            if (parts.length === 2 && subparts.length === 2) {
-                const base64Data = subparts[1];
-                imgURL = await uploadImgFile(base64Data);
-            }
+          const parts = routeData.imgUri.split(';');
+          const subparts = parts[1].split(',');
+          if (parts.length === 2 && subparts.length === 2) {
+            const base64Data = subparts[1];
+            imgURL = await uploadImgFile(base64Data);
+          }
         }
 
         const jsonURL = await uploadGeoJsonFile(routeData.geojsonData);
@@ -267,7 +253,7 @@ export default function ShareScreen() {
         description: '',
         fileInfo: null,
         originFileName: null,
-        geojsonData: null,    
+        geojsonData: null,
         coverimg: '',
         imgUri: null,
         geojson: '',
@@ -297,78 +283,124 @@ export default function ShareScreen() {
     fetchToken();
   }, [route]);
 
+  // Adjust FAB position for desktop/web safety
+  const fabStyle = {
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    bottom: 0, // In safe area
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Redirector />
-      <Appbar.Header elevated>
-        <Appbar.Content title={i18n.t('title_share')} />
-        <Menu
-          visible={menuVisible}
-          onDismiss={closeMenu}
-          anchor={<Appbar.Action icon="file-marker" color={routeData.geojsonData ? theme.colors.primary : undefined} onPress={openMenu} />}>
-          <Menu.Item onPress={() => handleDownload('geojson')} title={i18n.t('share_download_geojsonfile')} disabled={!routeData.geojsonData} />
-          <Menu.Item onPress={() => handleDownload('kml')} title={i18n.t('share_download_kmlfile')} disabled={!routeData.geojsonData} />
-        </Menu>
-        <Appbar.Action icon="github" color={githubToken ? theme.colors.primary : undefined} />
-      </Appbar.Header>
+      {/* Responsive Header */}
+      <Surface style={[styles.headerContainer, { backgroundColor: theme.colors.surface }]} elevation={2}>
+        <View style={[styles.headerContent, { maxWidth: contentMaxWidth }]}>
+          <Appbar.Header style={{ backgroundColor: 'transparent', elevation: 0 }}>
+            <Appbar.Content title={i18n.t('title_share')} />
+            {routeData.geojsonData && (
+              <Menu
+                visible={menuVisible}
+                onDismiss={closeMenu}
+                anchor={<Appbar.Action icon="file-download-outline" onPress={openMenu} />}>
+                <Menu.Item onPress={() => handleDownload('geojson')} title={i18n.t('share_download_geojsonfile')} />
+                <Menu.Item onPress={() => handleDownload('kml')} title={i18n.t('share_download_kmlfile')} />
+              </Menu>
+            )}
+            <Appbar.Action icon="github" color={githubToken ? theme.colors.primary : theme.colors.outline} />
+          </Appbar.Header>
+        </View>
+      </Surface>
 
       <ScrollView contentContainerStyle={{ alignItems: 'center', paddingBottom: 100 }}>
-        <View style={{ width: containerWidth, padding: 10 }}>
+        <View style={{ width: '100%', maxWidth: contentMaxWidth, padding: 16 }}>
 
-          <View style={styles.section}>
-            <Text variant="titleMedium" style={styles.sectionTitle}>1. Upload & Photo</Text>
+          {/* SECTION 1: UPLOAD */}
+          <Surface style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
+            <View style={[styles.sectionHeader, { borderBottomColor: theme.colors.outlineVariant }]}>
+              <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>1. {i18n.t('share_upload_file') || 'Upload & Media'}</Text>
+            </View>
+
             <View style={styles.uploadRow}>
               <Pressable onPress={pickFile} style={styles.uploadButton}>
-                 <Surface style={styles.uploadSurface} elevation={1}>
-                    <IconButton icon="file-upload" size={32} iconColor={theme.colors.primary} />
-                    <Text variant="labelLarge" style={{color: theme.colors.primary}}>{i18n.t('share_upload_file') || 'Upload File'}</Text>
-                    {routeData.fileInfo && (
-                      <Text variant="bodySmall" numberOfLines={1} style={{marginTop: 4, color: theme.colors.secondary}}>
-                        {routeData.fileInfo.split('File: ')[1]?.split(' ')[0] || 'File selected'}
-                      </Text>
-                    )}
-                 </Surface>
+                <View style={[styles.uploadPlaceholder, { borderColor: theme.colors.outline, backgroundColor: theme.colors.surfaceVariant }]}>
+                  {routeData.fileInfo ? (
+                    <View style={{ alignItems: 'center' }}>
+                      <IconButton icon="file-check" size={40} iconColor={theme.colors.primary} />
+                      <Text variant="bodyMedium" numberOfLines={1} style={{ fontWeight: 'bold', marginTop: 4 }}>{routeData.originFileName}</Text>
+                      <Text variant="bodySmall" style={{ color: theme.colors.secondary }}>GPX/KML Ready</Text>
+                    </View>
+                  ) : (
+                    <View style={{ alignItems: 'center' }}>
+                      <IconButton icon="file-upload-outline" size={40} iconColor={theme.colors.outline} />
+                      <Text variant="bodyMedium" style={{ color: theme.colors.outline }}>{i18n.t('share_upload_file')}</Text>
+                    </View>
+                  )}
+                </View>
               </Pressable>
 
               <Pressable onPress={pickImage} style={styles.uploadButton}>
-                 <Surface style={styles.uploadSurface} elevation={1}>
-                    {routeData.imgUri ? (
-                       <Image source={{ uri: routeData.imgUri }} style={styles.previewImage} />
-                    ) : (
-                      <>
-                        <IconButton icon="camera" size={32} iconColor={theme.colors.primary} />
-                        <Text variant="labelLarge" style={{color: theme.colors.primary}}>{i18n.t('share_upload_img')}</Text>
-                      </>
-                    )}
-                 </Surface>
+                <View style={[styles.uploadPlaceholder, { borderColor: theme.colors.outline, backgroundColor: theme.colors.surfaceVariant }]}>
+                  {routeData.imgUri ? (
+                    <Image source={{ uri: routeData.imgUri }} style={styles.previewImage} contentFit="cover" />
+                  ) : (
+                    <View style={{ alignItems: 'center' }}>
+                      <IconButton icon="image-plus" size={40} iconColor={theme.colors.outline} />
+                      <Text variant="bodyMedium" style={{ color: theme.colors.outline }}>{i18n.t('share_upload_img')}</Text>
+                    </View>
+                  )}
+                </View>
               </Pressable>
             </View>
-          </View>
+          </Surface>
 
-          <View style={styles.section}>
-             <Text variant="titleMedium" style={styles.sectionTitle}>2. Route Info</Text>
-             <RouteDashboard date={routeData.date} distance={routeData.distance_km} duration={routeData.duration_hour} theme={theme}/>
-             <Button mode="outlined" onPress={() => setDashEditModalVisible(true)} style={{marginTop: 8}}>
-                Edit Statistics
-             </Button>
-          </View>
 
-          <View style={styles.section}>
-            <Text variant="titleMedium" style={styles.sectionTitle}>3. Category</Text>
-            <RouteTypeButtons routeData={routeData} updateRouteData={updateRouteData} />
-            <RouteDifficultButtons routeData={routeData} updateRouteData={updateRouteData} />
-          </View>
+          {/* SECTION 2: STATS */}
+          <Surface style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
+            <View style={[styles.sectionHeader, { borderBottomColor: theme.colors.outlineVariant }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>2. {i18n.t('share_course_desc') || 'Details'}</Text>
+                <Button mode="text" compact onPress={() => setDashEditModalVisible(true)} disabled={!routeData.geojsonData}>
+                  Edit
+                </Button>
+              </View>
+            </View>
 
-          <View style={styles.section}>
-             <Text variant="titleMedium" style={styles.sectionTitle}>4. Description</Text>
-             <CourseCard
+            <View style={{ padding: 16 }}>
+              <RouteDashboard date={routeData.date} distance={routeData.distance_km} duration={routeData.duration_hour} theme={theme} />
+            </View>
+          </Surface>
+
+          {/* SECTION 3: CATEGORY & TITLE */}
+          <Surface style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
+            <View style={[styles.sectionHeader, { borderBottomColor: theme.colors.outlineVariant }]}>
+              <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>3. {i18n.t('share_course_name') || 'Classification'}</Text>
+            </View>
+            <View style={{ padding: 16 }}>
+              <Text variant="labelMedium" style={{ marginBottom: 8, color: theme.colors.secondary }}>Type</Text>
+              <RouteTypeButtons routeData={routeData} updateRouteData={updateRouteData} />
+
+              <Text variant="labelMedium" style={{ marginBottom: 8, marginTop: 16, color: theme.colors.secondary }}>Difficulty</Text>
+              <RouteDifficultButtons routeData={routeData} updateRouteData={updateRouteData} />
+            </View>
+          </Surface>
+
+          {/* SECTION 4: DESCRIPTION */}
+          <Surface style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
+            <View style={[styles.sectionHeader, { borderBottomColor: theme.colors.outlineVariant }]}>
+              <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>4. Description</Text>
+            </View>
+            <View style={{ padding: 16 }}>
+              <CourseCard
                 routeData={routeData}
                 githubToken={githubToken}
                 setDashEditModalVisible={setDashEditModalVisible}
                 setDescEditModalVisible={setDescEditModalVisible}
                 theme={theme}
-             />
-          </View>
+              />
+            </View>
+          </Surface>
 
         </View>
       </ScrollView>
@@ -379,20 +411,24 @@ export default function ShareScreen() {
         {snackbar.message}
       </Snackbar>
 
-      <DashEditModal isVisible={dashEditModalVisible} setVisible={setDashEditModalVisible} routeData={routeData} updateRouteData={updateRouteData}/>
-      <DescEditModal isVisible={descEditModalVisible} setVisible={setDescEditModalVisible} routeData={routeData} updateRouteData={updateRouteData}/>
+      <DashEditModal isVisible={dashEditModalVisible} setVisible={setDashEditModalVisible} routeData={routeData} updateRouteData={updateRouteData} />
+      <DescEditModal isVisible={descEditModalVisible} setVisible={setDescEditModalVisible} routeData={routeData} updateRouteData={updateRouteData} />
 
-      <FABButtons
-        routeData={routeData}
-        githubToken={githubToken}
-        pickFile={pickFile}
-        setDashEditModalVisible={setDashEditModalVisible} 
-        setDescEditModalVisible={setDescEditModalVisible}
-        setSubmitDialogVisible={setSubmitDialogVisible}
-      />
+      {/* Responsive FAB Container */}
+      {(routeData.geojsonData && githubToken && routeData.name) ? (
+        <View pointerEvents="box-none" style={[styles.fabContainer, { maxWidth: contentMaxWidth }]}>
+          <FAB
+            icon="send"
+            label={i18n.t('share_submit') || "Submit"}
+            style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+            color={theme.colors.onPrimary}
+            onPress={() => setSubmitDialogVisible(true)}
+          />
+        </View>
+      ) : null}
 
-      <SubmitConfirmDialog isVisible={isSubmitDialogVisible} setVisible={setSubmitDialogVisible} handleSubmit={handleSubmit}/>
-      <CheckDialog isVisible={isCheckDialogVisible} setVisible={setCheckDialogVisible}/>
+      <SubmitConfirmDialog isVisible={isSubmitDialogVisible} setVisible={setSubmitDialogVisible} handleSubmit={handleSubmit} />
+      <CheckDialog isVisible={isCheckDialogVisible} setVisible={setCheckDialogVisible} />
     </View>
   );
 };
@@ -401,56 +437,69 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  section: {
-    marginBottom: 20,
+  headerContainer: {
+    zIndex: 1,
+    // Web shadow hack if needed, but Surface handles elevation
   },
-  sectionTitle: {
-    marginBottom: 8,
-    fontWeight: 'bold',
-    marginLeft: 4
+  headerContent: {
+    width: '100%',
+    alignSelf: 'center',
+  },
+  sectionCard: {
+    borderRadius: 16,
+    marginBottom: 20,
+    overflow: 'hidden',
+  },
+  sectionHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
   uploadRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
+    padding: 16,
+    gap: 16,
   },
   uploadButton: {
     flex: 1,
+    aspectRatio: 1.5,
   },
-  uploadSurface: {
-    height: 120,
-    alignItems: 'center',
-    justifyContent: 'center',
+  uploadPlaceholder: {
+    borderWidth: 1,
     borderRadius: 12,
-    backgroundColor: '#fff',
+    borderStyle: 'dashed',
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     overflow: 'hidden',
   },
   previewImage: {
     width: '100%',
     height: '100%',
   },
+  fabContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    left: 0,
+    alignSelf: 'center',
+    width: '100%',
+    height: 100, // Touch area
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+    padding: 24,
+  },
+  fab: {
+    borderRadius: 28,
+  }
 });
 
-const ProgressCircle = ({isProcessing}) => {
-  const styles = StyleSheet.create({
-    loadingContainer: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      top: 0,
-      bottom: 0,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'rgba(255, 255, 255, 0.5)',
-      zIndex: 1000,
-    },
-  });
-
+const ProgressCircle = ({ isProcessing }) => {
   if (isProcessing) {
     return (
       <Portal>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" animating={true} color="#0000ff" />
+        <View style={{ ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.6)', zIndex: 1000 }}>
+          <ActivityIndicator size="large" animating={true} />
         </View>
       </Portal>
     );
@@ -458,136 +507,107 @@ const ProgressCircle = ({isProcessing}) => {
   return (<></>);
 }
 
-const CourseCard = ({routeData, githubToken, setDashEditModalVisible, setDescEditModalVisible, theme}) => {
-  return(
-    <Card style={{backgroundColor: theme.colors.surface}} mode="outlined">
-      <Card.Title
-        title={routeData.name? routeData.name : i18n.t('share_card_no_title')}
-        titleVariant="titleMedium"
-        right={(props) => (routeData.geojsonData && githubToken) ? <IconButton {...props} icon="pencil" onPress={() => setDashEditModalVisible(true)} /> : null}
-      />
-      <Divider />
-      <Card.Content style={{paddingTop: 16}}>
-        <Text variant="bodyMedium" style={{minHeight: 60}}>
-           {routeData.description ? routeData.description : i18n.t('share_card_no_desc')}
+const CourseCard = ({ routeData, githubToken, setDashEditModalVisible, setDescEditModalVisible, theme }) => {
+  return (
+    <View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+        <Text variant="titleLarge" style={{ fontWeight: 'bold', flex: 1 }}>
+          {routeData.name || i18n.t('share_card_no_title')}
         </Text>
-      </Card.Content>
-      <Card.Actions>
-        {(routeData.geojsonData && githubToken) && <Button mode="text" onPress={() => setDescEditModalVisible(true)}>Edit Description</Button>}
-      </Card.Actions>      
-    </Card>
+        <IconButton icon="pencil-outline" onPress={() => setDashEditModalVisible(true)} size={20} />
+      </View>
+
+      <Divider style={{ marginBottom: 8 }} />
+
+      <Pressable onPress={() => setDescEditModalVisible(true)} style={{ minHeight: 80, paddingVertical: 8 }}>
+        {routeData.description ? (
+          <Text variant="bodyLarge">{routeData.description}</Text>
+        ) : (
+          <Text variant="bodyLarge" style={{ color: theme.colors.outline, fontStyle: 'italic' }}>{i18n.t('share_card_no_desc') || "Tap to add description..."}</Text>
+        )}
+      </Pressable>
+    </View>
   );
 }
 
-const RouteTypeButtons = ({routeData, updateRouteData}) => {
+const RouteTypeButtons = ({ routeData, updateRouteData }) => {
   return (
-    <SegmentedButtons style={{marginBottom: 8}}
+    <SegmentedButtons
       value={routeData.type}
       onValueChange={(value) => updateRouteData('type', value)}
       buttons={[
-        { value: 'hiking', label: i18n.t('hiking')},
-        { value: 'walking', label: i18n.t('walking')},
-        { value: 'cycling', label: i18n.t('cycling')},
+        { value: 'hiking', label: i18n.t('hiking') },
+        { value: 'walking', label: i18n.t('walking') },
+        { value: 'cycling', label: i18n.t('cycling') },
       ]}
     />
   );
 };
 
-const RouteDifficultButtons = ({routeData, updateRouteData}) => {
+const RouteDifficultButtons = ({ routeData, updateRouteData }) => {
+  // Only show icons or shorter labels on small screens if needed, but standard text is usually fine
   return (
-    <SegmentedButtons style={{marginBottom: 8}}
+    <SegmentedButtons
       value={routeData.difficulty}
       onValueChange={(value) => updateRouteData('difficulty', value)}
       buttons={[
-        { value: 'easy', label: i18n.t('easy')},
-        { value: 'normal', label: i18n.t('normal')},
-        { value: 'moderate', label: i18n.t('moderate')},
-        { value: 'hard', label: i18n.t('hard')},
+        { value: 'easy', label: i18n.t('easy') },
+        { value: 'normal', label: i18n.t('normal') },
+        { value: 'moderate', label: i18n.t('moderate') },
+        { value: 'hard', label: i18n.t('hard') },
       ]}
     />
   );
 };
 
-const FABButtons = ({routeData, githubToken, pickFile, setDashEditModalVisible, setDescEditModalVisible, setSubmitDialogVisible}) => {
-  const [state, setState] = React.useState({ open: false });
-  const onStateChange = ({ open }) => setState({ open });
-  const { open } = state;
-  const theme = useTheme();
 
-  // Only show FAB actions if we have token and minimal data
-  const canSubmit = githubToken && routeData.geojsonData && routeData.name;
-
-  if (!canSubmit) return null;
-
-  return (
-    <Portal>
-      <FAB
-        icon="send"
-        label={i18n.t('share_submit') || "Submit"}
-        style={{
-          position: 'absolute',
-          margin: 16,
-          right: 0,
-          bottom: 0,
-          backgroundColor: theme.colors.primary,
-        }}
-        color={theme.colors.onPrimary}
-        onPress={() => setSubmitDialogVisible(true)}
-      />
-    </Portal>
-  );
-};
-
-const DescEditModal = ({isVisible, setVisible, routeData, updateRouteData}) => {
+const DescEditModal = ({ isVisible, setVisible, routeData, updateRouteData }) => {
   const styles = StyleSheet.create({
-    textArea: {
-      flex: 1,
-      backgroundColor: '#fff'
-    },
     containerStyle: {
-      marginHorizontal: 24,
-      backgroundColor: 'white', 
-      padding: 20,
-      height: "80%",
-      borderRadius: 8
+      alignSelf: 'center',
+      width: '90%',
+      maxWidth: 600,
+      backgroundColor: 'white',
+      padding: 24,
+      borderRadius: 16,
+      height: '60%'
     },
-    viewContainer: {
-      flex: 1,
-    }
   });
 
   return (
     <Portal>
       <Modal visible={isVisible} onDismiss={() => setVisible(false)} contentContainerStyle={styles.containerStyle}>
-        <View style={styles.viewContainer}>
-            <Text variant="titleMedium" style={{marginBottom: 10}}>{i18n.t('share_course_desc')}</Text>
-            <TextInput mode="outlined"
-              multiline={true} 
-              style={styles.textArea}
-              placeholder="Describe the route..."
-              value={routeData.description}
-              onChangeText={(value) => updateRouteData('description', value)} />
-            <Button onPress={() => setVisible(false)} style={{marginTop: 10}}>Done</Button>
+        <Text variant="titleMedium" style={{ marginBottom: 16, fontWeight: 'bold' }}>{i18n.t('share_course_desc')}</Text>
+        <TextInput mode="outlined"
+          multiline={true}
+          style={{ flex: 1, backgroundColor: 'transparent' }}
+          placeholder="Describe the route..."
+          value={routeData.description}
+          onChangeText={(value) => updateRouteData('description', value)} />
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16 }}>
+          <Button onPress={() => setVisible(false)}>Done</Button>
         </View>
       </Modal>
     </Portal>
   );
 };
 
-const DashEditModal = ({isVisible, setVisible, routeData, updateRouteData}) => {
+const DashEditModal = ({ isVisible, setVisible, routeData, updateRouteData }) => {
   const styles = StyleSheet.create({
     containerStyle: {
-      backgroundColor: 'white', 
-      padding: 20, 
-      marginHorizontal: 24,
-      borderRadius: 8
+      alignSelf: 'center',
+      width: '90%',
+      maxWidth: 500,
+      backgroundColor: 'white',
+      padding: 24,
+      borderRadius: 16
     },
     input: {
-      marginBottom: 10,
+      marginBottom: 16,
     }
   });
 
-  const onChangeNumText=(key, value) => {
+  const onChangeNumText = (key, value) => {
     const regex = /^\d*\.?\d{0,1}$/;
     if (regex.test(value) || value === '') {
       updateRouteData(key, value);
@@ -595,17 +615,18 @@ const DashEditModal = ({isVisible, setVisible, routeData, updateRouteData}) => {
   }
 
   const formatDate = (date) => {
-    if(date) {
+    if (date) {
       let formattedDate = date.getFullYear() + "-" + (date.getMonth() + 1).toString().padStart(2, '0') + "-" + date.getDate().toString().padStart(2, '0');
       return formattedDate;
     }
+    return '';
   };
 
   const [show, setShow] = useState(false);
   const [dateStr, setDateStr] = useState(formatDate(routeData.date));
 
   useEffect(() => {
-     setDateStr(formatDate(routeData.date));
+    setDateStr(formatDate(routeData.date));
   }, [routeData.date]);
 
   const onChange = (event, selectedDate) => {
@@ -618,28 +639,26 @@ const DashEditModal = ({isVisible, setVisible, routeData, updateRouteData}) => {
     setDateStr(value);
     if (value != null && value.match(/^\d{4}-\d{2}-\d{2}$/) != null) {
       updateRouteData('date', new Date(value));
-    } 
-  };
-
-  const hasDateErrors = () => {
-    return dateStr != null && dateStr.match(/^\d{4}-\d{2}-\d{2}$/) === null;
+    }
   };
 
   return (
     <Portal>
       <Modal visible={isVisible} onDismiss={() => setVisible(false)} contentContainerStyle={styles.containerStyle}>
-        <Text variant="titleMedium" style={{marginBottom: 10}}>Edit Route Details</Text>
+        <Text variant="headlineSmall" style={{ marginBottom: 20, fontWeight: 'bold' }}>Edit Details</Text>
+
         <TextInput style={styles.input} mode="outlined"
           label={i18n.t('share_course_name')} value={routeData.name}
           onChangeText={(value) => updateRouteData('name', value)} right={<TextInput.Affix text="/50" />} />
 
         <Pressable onPress={() => setShow(true)}>
-            <View pointerEvents="none">
-                <TextInput style={styles.input} mode="outlined"
-                label={i18n.t('share_record_date')} value={dateStr}
-                onChangeText={(value) => onTextChange(value)}
-                />
-            </View>
+          <View pointerEvents="none">
+            <TextInput style={styles.input} mode="outlined"
+              label={i18n.t('share_record_date')} value={dateStr}
+              onChangeText={(value) => onTextChange(value)}
+              right={<TextInput.Icon icon="calendar" />}
+            />
+          </View>
         </Pressable>
 
         {show && (
@@ -651,27 +670,37 @@ const DashEditModal = ({isVisible, setVisible, routeData, updateRouteData}) => {
             onChange={onChange}
           />
         )}
-        <TextInput style={styles.input} mode="outlined" keyboardType="decimal-pad"
-          label={i18n.t('share_course_distance')} value={routeData.distance_km ? String(routeData.distance_km) : ''}
-          onChangeText={(value) => onChangeNumText('distance_km', value)}
-          right={<TextInput.Affix text="km" />}
-          />
-        <TextInput style={styles.input} mode="outlined" keyboardType="decimal-pad"
-          label={i18n.t('share_course_duration')} value={routeData.duration_hour ? String(routeData.duration_hour) : ''}
-          onChangeText={(value) => onChangeNumText('duration_hour', value)}
-          right={<TextInput.Affix text="h" />}
-          />
-        <Button mode="contained" onPress={() => setVisible(false)} style={{marginTop: 10}}>Save</Button>
+
+        <View style={{ flexDirection: 'row', gap: 16 }}>
+          <View style={{ flex: 1 }}>
+            <TextInput style={styles.input} mode="outlined" keyboardType="decimal-pad"
+              label={i18n.t('share_course_distance')} value={routeData.distance_km ? String(routeData.distance_km) : ''}
+              onChangeText={(value) => onChangeNumText('distance_km', value)}
+              right={<TextInput.Affix text="km" />}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <TextInput style={styles.input} mode="outlined" keyboardType="decimal-pad"
+              label={i18n.t('share_course_duration')} value={routeData.duration_hour ? String(routeData.duration_hour) : ''}
+              onChangeText={(value) => onChangeNumText('duration_hour', value)}
+              right={<TextInput.Affix text="h" />}
+            />
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8 }}>
+          <Button mode="contained" onPress={() => setVisible(false)}>Save Changes</Button>
+        </View>
       </Modal>
     </Portal>
   );
 };
 
-const RouteDashboard = ({date, distance, duration, theme}) => {
+const RouteDashboard = ({ date, distance, duration, theme }) => {
   const styles = StyleSheet.create({
     board: {
-      flexDirection: 'row', 
-      alignItems: 'center', 
+      flexDirection: 'row',
+      alignItems: 'center',
       justifyContent: 'space-between',
       backgroundColor: theme.colors.surfaceVariant,
       borderRadius: 12,
@@ -688,12 +717,14 @@ const RouteDashboard = ({date, distance, duration, theme}) => {
     },
     textStyle: {
       fontWeight: 'bold',
-      fontSize: 18,
+      fontSize: 20,
       color: theme.colors.onSurfaceVariant,
       marginTop: 4
     },
     unitStyle: {
       fontSize: 12,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
       color: theme.colors.onSurfaceVariant,
       opacity: 0.7
     },
@@ -715,46 +746,46 @@ const RouteDashboard = ({date, distance, duration, theme}) => {
       <View style={styles.divider} />
       <View style={styles.item}>
         <Text style={styles.unitStyle}>{i18n.t('share_course_distance')}</Text>
-        <Text style={styles.textStyle}>{distance? distance: "-"} <Text variant="bodySmall">km</Text></Text>
+        <Text style={styles.textStyle}>{distance ? distance : "-"} <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>km</Text></Text>
       </View>
       <View style={styles.divider} />
       <View style={styles.item}>
         <Text style={styles.unitStyle}>{i18n.t('share_course_duration')}</Text>
-        <Text style={styles.textStyle}>{duration? duration: "-"} <Text variant="bodySmall">h</Text></Text>
+        <Text style={styles.textStyle}>{duration ? duration : "-"} <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>h</Text></Text>
       </View>
-    </View>  
+    </View>
   );
 }
 
-const SubmitConfirmDialog = ({ isVisible, setVisible, handleSubmit}) => {
+const SubmitConfirmDialog = ({ isVisible, setVisible, handleSubmit }) => {
   return (
     <Portal>
-    <Dialog visible={isVisible} onDismiss={() => setVisible(false)}>
-      <Dialog.Title>{i18n.t('share_submit_dialog_title')}</Dialog.Title>
-      <Dialog.Content>
-        <Text>{i18n.t('share_submit_dialog_message')}</Text>
-      </Dialog.Content>
-      <Dialog.Actions>
-        <Button onPress={() => setVisible(false)}>{i18n.t('cancel')}</Button>
-        <Button onPress={() => handleSubmit()}>{i18n.t('confirm')}</Button>
-      </Dialog.Actions>
-    </Dialog>
+      <Dialog visible={isVisible} onDismiss={() => setVisible(false)}>
+        <Dialog.Title>{i18n.t('share_submit_dialog_title')}</Dialog.Title>
+        <Dialog.Content>
+          <Text>{i18n.t('share_submit_dialog_message')}</Text>
+        </Dialog.Content>
+        <Dialog.Actions>
+          <Button onPress={() => setVisible(false)}>{i18n.t('cancel')}</Button>
+          <Button onPress={() => handleSubmit()}>{i18n.t('confirm')}</Button>
+        </Dialog.Actions>
+      </Dialog>
     </Portal>
   );
 }
 
-const CheckDialog = ({ isVisible, setVisible}) => {
+const CheckDialog = ({ isVisible, setVisible }) => {
   return (
     <Portal>
-    <Dialog visible={isVisible} onDismiss={() => setVisible(false)}>
-      <Dialog.Title>{i18n.t('share_filecheck_dialog_title')}</Dialog.Title>
-      <Dialog.Content>
-        <Text>{i18n.t('share_filecheck_dialog_message')}</Text>
-      </Dialog.Content>
-      <Dialog.Actions>
-        <Button onPress={() => setVisible(false)}>{i18n.t('confirm')}</Button>
-      </Dialog.Actions>
-    </Dialog>
+      <Dialog visible={isVisible} onDismiss={() => setVisible(false)}>
+        <Dialog.Title>{i18n.t('share_filecheck_dialog_title')}</Dialog.Title>
+        <Dialog.Content>
+          <Text>{i18n.t('share_filecheck_dialog_message')}</Text>
+        </Dialog.Content>
+        <Dialog.Actions>
+          <Button onPress={() => setVisible(false)}>{i18n.t('confirm')}</Button>
+        </Dialog.Actions>
+      </Dialog>
     </Portal>
   );
 }

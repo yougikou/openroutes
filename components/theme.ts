@@ -4,44 +4,50 @@ export const theme: MD3Theme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    primary: '#2E7D32', // Forest Green
+    // Primary: A bright, modern 'Spring/Nature' green. Distinctive but not harsh.
+    primary: '#00BA63',
     onPrimary: '#FFFFFF',
-    primaryContainer: '#C8E6C9',
-    onPrimaryContainer: '#002105',
+    primaryContainer: '#D1F7E2',
+    onPrimaryContainer: '#00391D',
 
-    secondary: '#5D4037', // Earth Brown
+    // Secondary: Blue Grey. Modern, serious, complements green without clashing.
+    secondary: '#546E7A',
     onSecondary: '#FFFFFF',
-    secondaryContainer: '#D7CCC8',
-    onSecondaryContainer: '#1E110F',
+    secondaryContainer: '#ECEFF1',
+    onSecondaryContainer: '#263238',
 
-    tertiary: '#1565C0', // Water Blue
+    // Tertiary: Ocean Blue. For accents/info.
+    tertiary: '#0288D1',
     onTertiary: '#FFFFFF',
-    tertiaryContainer: '#BBDEFB',
-    onTertiaryContainer: '#001E3C',
+    tertiaryContainer: '#E1F5FE',
+    onTertiaryContainer: '#002845',
 
     error: '#BA1A1A',
     onError: '#FFFFFF',
     errorContainer: '#FFDAD6',
     onErrorContainer: '#410002',
 
-    background: '#F5F5F5',
-    onBackground: '#1C1C1E',
+    // Backgrounds: Pure White for that 'Bright/Light' feel.
+    background: '#FFFFFF',
+    onBackground: '#191C1C',
 
     surface: '#FFFFFF',
-    onSurface: '#1C1C1E',
-    surfaceVariant: '#E0E0E0',
-    onSurfaceVariant: '#49454F',
+    onSurface: '#191C1C',
+    // Surface Variant: Neutral clean gray. Removed the green tint to avoid 'overwhelming green'.
+    surfaceVariant: '#F7F9FA',
+    onSurfaceVariant: '#404944',
 
-    outline: '#79747E',
-    outlineVariant: '#C4C7C5',
+    outline: '#707973',
+    outlineVariant: '#C0C9C2',
 
+    // Elevation: subtle cool gray/white tones.
     elevation: {
       level0: 'transparent',
-      level1: '#F5F5F5',
-      level2: '#EEEEEE',
-      level3: '#E0E0E0',
-      level4: '#BDBDBD',
-      level5: '#9E9E9E',
+      level1: '#F8F9FA',
+      level2: '#F1F3F4',
+      level3: '#ECEFF1',
+      level4: '#E6E9EC',
+      level5: '#E2E6EA',
     },
   },
 };
