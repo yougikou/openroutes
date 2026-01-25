@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import * as AuthSession from 'expo-auth-session';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, useWindowDimensions, ScrollView } from 'react-native';
 import { useRoute } from '@react-navigation/native';
-import { Appbar, List } from 'react-native-paper';
+import { Appbar, List, useTheme, Surface, Text, Button, Divider, Avatar } from 'react-native-paper';
 import i18n from '../i18n/i18n';
 import { readData } from '../apis/StorageAPI';
 import Redirector from '../Redirector';
@@ -13,6 +13,11 @@ const redirectUri = AuthSession.makeRedirectUri({
 });
 
 const SettingScreen = (): React.ReactElement => {
+  const theme = useTheme();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
+  const contentMaxWidth = isDesktop ? 800 : '100%';
+
   const [githubToken, setGithubToken] = useState<string | null>(null);
 
   const [, response, promptAsync] = AuthSession.useAuthRequest(
@@ -42,32 +47,112 @@ const SettingScreen = (): React.ReactElement => {
     fetchToken();
   }, [route]);
 
+  // Adjust container padding based on screen size
+  const containerPadding = isDesktop ? 24 : 16;
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Redirector />
-      <Appbar.Header elevated>
-        <Appbar.Content title={i18n.t('title_setting')} />
-        <Appbar.Action icon="github" color={githubToken ? '#4CAF50' : undefined} />
-      </Appbar.Header>
-      <List.Section>
-        <List.Subheader>{i18n.t('setting_account')}</List.Subheader>
-        <List.Item
-          left={(props) => <List.Icon {...props} icon="github" />}
-          title={i18n.t('setting_github_oauth')}
-          onPress={() => {
-            void promptAsync();
-          }}
-        />
-      </List.Section>
+
+      {/* Header */}
+      <Surface style={[styles.headerContainer, { backgroundColor: theme.colors.surface }]} elevation={2}>
+        <View style={[styles.headerContent, { maxWidth: contentMaxWidth }]}>
+          <Appbar.Header style={{ backgroundColor: 'transparent', elevation: 0 }}>
+            <Appbar.Content title={i18n.t('title_setting')} />
+            <Appbar.Action icon="github" color={githubToken ? theme.colors.primary : theme.colors.outline} />
+          </Appbar.Header>
+        </View>
+      </Surface>
+
+      <ScrollView contentContainerStyle={{ alignItems: 'center' }}>
+        <View style={{ width: '100%', maxWidth: contentMaxWidth, padding: containerPadding }}>
+
+          {/* Account Settings Section */}
+          <View style={styles.sectionTitleContainer}>
+            <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>
+              {i18n.t('setting_account')}
+            </Text>
+          </View>
+
+          <Surface style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={1}>
+            {githubToken ? (
+              <View style={styles.connectedState}>
+                <Avatar.Icon size={48} icon="check-bold" style={{ backgroundColor: theme.colors.primaryContainer }} color={theme.colors.onPrimaryContainer} />
+                <TitleSection title="GitHub Connected" subtitle="Your account is linked and ready to sync routes." />
+                <Button mode="outlined" textColor={theme.colors.error} onPress={() => { /* Logout Logic if needed */ }}>
+                  Disconnect (TODO)
+                </Button>
+              </View>
+            ) : (
+              <List.Item
+                title={i18n.t('setting_github_oauth')}
+                description="Connect to GitHub to backup and share your routes."
+                left={(props) => <List.Icon {...props} icon="github" color={theme.colors.onSurface} />}
+                right={(props) => <Button mode="contained" compact style={{ alignSelf: 'center', marginLeft: 8 }} onPress={() => void promptAsync()}>Connect</Button>}
+                style={{ paddingVertical: 12 }}
+                titleStyle={{ fontWeight: 'bold' }}
+              />
+            )}
+          </Surface>
+
+          {/* App Info Section (Example) */}
+          <View style={[styles.sectionTitleContainer, { marginTop: 24 }]}>
+            <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>
+              About
+            </Text>
+          </View>
+          <Surface style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={1}>
+            <List.Item
+              title="Version"
+              description="1.0.0 (Beta)"
+              left={(props) => <List.Icon {...props} icon="information-outline" />}
+            />
+            <Divider />
+            <List.Item
+              title="Open Source"
+              description="Visit our repository"
+              left={(props) => <List.Icon {...props} icon="code-tags" />}
+              onPress={() => { /* Link to repo */ }}
+            />
+          </Surface>
+
+        </View>
+      </ScrollView>
     </View>
   );
 };
 
+const TitleSection = ({ title, subtitle }) => (
+  <View style={{ flex: 1, marginLeft: 16 }}>
+    <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>{title}</Text>
+    <Text variant="bodyMedium" style={{ opacity: 0.7 }}>{subtitle}</Text>
+  </View>
+)
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
+  headerContainer: {
+    zIndex: 1,
+  },
+  headerContent: {
+    width: '100%',
+    alignSelf: 'center',
+  },
+  sectionTitleContainer: {
+    marginBottom: 12,
+    paddingHorizontal: 4
+  },
+  card: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  connectedState: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16
+  }
 });
 
 export default SettingScreen;
