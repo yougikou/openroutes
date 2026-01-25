@@ -121,7 +121,7 @@ const HomeScreen = (): React.ReactElement => {
         setGithubToken(token);
       }
 
-      const issuesData = await fetchIssues(pageRef.current, PER_PAGE, FILTERS, token);
+      const issuesData = await fetchIssues(pageRef.current, PER_PAGE, FILTERS, token, searchQuery);
       if (issuesData.length > 0) {
         setIssues((prevIssues) => [...prevIssues, ...issuesData]);
         pageRef.current += 1;
@@ -132,7 +132,7 @@ const HomeScreen = (): React.ReactElement => {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading]);
+  }, [isLoading, searchQuery]);
 
   useEffect(() => {
     loadIssues();
@@ -227,6 +227,8 @@ const HomeScreen = (): React.ReactElement => {
           onChangeText={setSearchQuery}
           value={searchQuery}
           elevation={1}
+          onSubmitEditing={resetAndLoad}
+          onIconPress={resetAndLoad}
         />
 
         {isLoading && issues.length === 0 ? (
