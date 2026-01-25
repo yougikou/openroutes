@@ -10,10 +10,11 @@ To create a fully free, decentralized, and community-driven route sharing platfo
 | Stage | User Action | System Interaction | Backend Process |
 | :--- | :--- | :--- | :--- |
 | **Discover** | User opens app, browses list, searches keywords. | App fetches issues from GitHub with `route` label. | `GET /repos/{owner}/{repo}/issues` |
-| **View Detail** | User clicks a route card. | **(Future)** App displays map with route track, elevation profile, and details. | Fetch GeoJSON from persistent storage (Git/Gist). |
+| **View Detail** | User clicks a route card. | **(Future)** App displays map with route track, elevation profile, and details. | Fetch GeoJSON from persistent storage (GitHub `assets` branch). |
 | **Download** | User clicks "GPX" or "KML". | App converts GeoJSON to requested format and triggers download. | Client-side conversion. |
-| **Create** | User logs in via GitHub, uploads GPX/KML, adds photos. | App parses file for metadata (dist/dur/date), uploads images to Imgur. | **(Future)** Commit GeoJSON to Repo/Gist. |
-| **Publish** | User submits the route. | App creates a GitHub Issue with YAML metadata and links. | `POST /repos/{owner}/{repo}/issues` |
+| **Create** | User logs in via GitHub, uploads GPX/KML, adds photos. | App parses file, uploads to temporary storage (File.io/Imgur). | Client-side processing. |
+| **Publish** | User submits the route. | App creates a GitHub Issue with links to temp storage. | `POST /repos/{owner}/{repo}/issues` |
+| **Ingest (Auto)** | - | GitHub Action triggers on new Issue. | **Downloads files from temp storage, commits to `assets` branch, updates Issue body.** |
 | **Engage** | User comments or reacts. | **(Future)** App shows comments/reactions on Detail screen. | GitHub Comments/Reactions API. |
 
 ### 2. System Architecture
@@ -21,31 +22,41 @@ To create a fully free, decentralized, and community-driven route sharing platfo
 #### Current State
 -   **Frontend:** React Native (Expo)
 -   **DB:** GitHub Issues (Metadata)
--   **Blob Storage:**
-    -   Images: Imgur (Free, generally reliable)
-    -   GeoJSON: File.io (Ephemeral, **Critical Issue**)
+-   **Ingestion (Buffer):**
+    -   Images: Imgur (Used for initial upload)
+    -   GeoJSON: File.io (Used for initial upload)
+-   **Persistence Layer:**
+    -   **GeoJSON:** Automatically moved from File.io to **GitHub Repo (`assets` branch)** via GitHub Actions (`update-file-to-issue.yml`).
+    -   **Images:** Currently remain on Imgur (External Dependency).
 -   **Auth:** GitHub OAuth
 
 #### Target Architecture (Serverless 2.0)
 -   **Frontend:** React Native (Expo)
 -   **DB:** GitHub Issues (Searchable Metadata)
--   **Blob Storage:**
-    -   Images: Imgur or GitHub Repo (`assets` branch)
-    -   GeoJSON: **GitHub Repository (Committed file)** or **GitHub Gist**
+-   **Storage:**
+    -   **All Assets (Images & GeoJSON):** GitHub Repository (`assets` branch).
+    -   **Ingestion:** Minimized external dependency.
 -   **Maps:** React Native Maps (Mobile) / Leaflet (Web)
 -   **Auth:** GitHub OAuth
 
 ## Roadmap & Implementation Plan
 
 ### Phase 1: Foundation & Stability (Immediate)
-**Goal:** Fix data persistence and basic usability.
-1.  **Replace File.io with GitHub Storage:**
-    -   Instead of uploading to File.io, the app should use the GitHub API to commit the GeoJSON file to a specific path in the repository (e.g., `data/routes/{year}/{month}/{id}.geojson`) or create a Secret Gist.
-    -   Link this permanent URL in the Issue body.
-2.  **Implement Route Detail Screen:**
+**Goal:** Complete the "Self-Contained" storage model and remove long-term external dependencies.
+1.  **Secure Image Storage (Reduce External Dependency):**
+    -   **Problem:** Images currently rely on Imgur indefinitely.
+    -   **Solution:** Update the `update-file-to-issue.yml` workflow to:
+        1.  Detect Imgur links in the issue body.
+        2.  Download the image.
+        3.  Commit the image to `assets/images/` in the repository.
+        4.  Replace the Imgur link in the Issue body with the raw GitHub link (e.g., `https://raw.githubusercontent.com/...`).
+    -   **Result:** Imgur is only used as a temporary buffer (< 1 minute), reducing risk of data loss or service changes.
+2.  **Robust Ingestion:**
+    -   Evaluate alternatives to File.io if it proves unreliable for the ~1 minute window between User Submit and Action Run.
+3.  **Implement Route Detail Screen:**
     -   Add a Map View component.
     -   Visualize the GeoJSON path on the map.
-    -   Show elevation profile (if data exists).
+    -   Show elevation profile.
 
 ### Phase 2: Enhanced Discovery (Mid-term)
 **Goal:** Make it easier to find relevant routes.
@@ -64,10 +75,8 @@ To create a fully free, decentralized, and community-driven route sharing platfo
 2.  **Social Features:**
     -   Display comments from the GitHub Issue in the app.
     -   Allow posting comments from the app.
-3.  **Gamification:**
-    -   Badges for number of routes shared (using GitHub labels on user?).
 
 ## Technical Requirements
--   **GitHub API:** Enhanced usage for file commits (Content API).
+-   **GitHub Actions:** Enhancement of `update-file-to-issue.yml` for image processing.
 -   **Map Library:** `react-native-maps` for native, `react-leaflet` or Mapbox GL JS for web compatibility.
 -   **State Management:** TanStack Query (React Query) for better caching of API responses.
