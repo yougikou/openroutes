@@ -45,7 +45,7 @@ const SettingScreen = (): React.ReactElement => {
   return (
     <View style={styles.container}>
       <Redirector />
-      <Appbar.Header>
+      <Appbar.Header elevated>
         <Appbar.Content title={i18n.t('title_setting')} />
         <Appbar.Action icon="github" color={githubToken ? '#4CAF50' : undefined} />
       </Appbar.Header>

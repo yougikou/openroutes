@@ -138,6 +138,7 @@ export const fetchIssues = async (
   perPage = 10,
   filters: RouteFilters = {},
   token?: string | null,
+  searchQuery?: string,
 ): Promise<RouteIssue[]> => {
   const { owner, repo } = resolveRepoInfo();
 
@@ -146,19 +147,26 @@ export const fetchIssues = async (
     return [];
   }
 
+  let url = '';
   const searchParams = new URLSearchParams({
     page: page.toString(),
     per_page: perPage.toString(),
-    labels: 'route',
   });
 
   Object.entries(filters).forEach(([key, value]) => {
-    if (value !== undefined) {
+    if (value !== undefined && key !== 'labels') {
       searchParams.append(key, String(value));
     }
   });
 
-  const url = 'https://api.github.com/repos/' + owner + '/' + repo + '/issues?' + searchParams.toString();
+  if (searchQuery && searchQuery.trim().length > 0) {
+    const q = `repo:${owner}/${repo} is:issue label:route ${searchQuery}`;
+    searchParams.append('q', q);
+    url = 'https://api.github.com/search/issues?' + searchParams.toString();
+  } else {
+    searchParams.append('labels', 'route');
+    url = 'https://api.github.com/repos/' + owner + '/' + repo + '/issues?' + searchParams.toString();
+  }
 
   try {
     const headers: Record<string, string> = {};
@@ -172,7 +180,13 @@ export const fetchIssues = async (
       throw new Error('GitHub API responded with status ' + response.status);
     }
 
-    const rawData = (await response.json()) as GitHubIssue[];
+    let rawData: GitHubIssue[] = [];
+    if (searchQuery && searchQuery.trim().length > 0) {
+      const searchResult = (await response.json()) as { items: GitHubIssue[] };
+      rawData = searchResult.items;
+    } else {
+      rawData = (await response.json()) as GitHubIssue[];
+    }
 
     return rawData.map((issue) => {
       const bodyObj = parseYaml<RouteMetadata>(issue.body);
