@@ -28,9 +28,9 @@ To create a fully free, decentralized, and community-driven route sharing platfo
 -   **Persistence Layer:**
     -   **GeoJSON:** GitHub Repo (`assets` branch).
     -   **Images:** Imgur (External).
--   **Auth:** GitHub OAuth
+-   **Auth:** GitHub OAuth (Insecure: Client Secret exposed, relies on public proxy).
 
-#### Target Architecture (Release Staging & GeoJSON Archiving)
+#### Target Architecture (Serverless 2.0)
 -   **Frontend:** React Native (Expo)
 -   **DB:** GitHub Issues (Searchable Metadata)
 -   **GeoJSON Workflow:**
@@ -40,38 +40,45 @@ To create a fully free, decentralized, and community-driven route sharing platfo
 -   **Image Strategy:**
     -   **Primary:** External Hosting (Imgur) to keep repository size low.
     -   **Backup:** "Healer Bot" (Future) to regenerate visualizations if links die.
+-   **Auth Service:**
+    -   **Token Exchange:** A simple Serverless Function (Cloudflare Worker / Vercel) to securely handle `client_secret` and exchange codes for tokens.
 
 ## Roadmap & Implementation Plan
 
 ### Phase 1: Foundation & Stability (Immediate)
-**Goal:** Implement the "Release Inbox" workflow to guarantee GeoJSON persistence.
+**Goal:** Implement the "Release Inbox" workflow and Secure Authentication.
 1.  **GeoJSON Core Workflow (Release Staging):**
-    -   **Step 1: Upload (Drop):** Modify App to upload GeoJSON to a specific GitHub Release asset instead of File.io.
-    -   **Step 2: Ingest (Action):** Update `update-file-to-issue.yml` to:
-        -   Detect Release Asset links in the Issue Body.
-        -   Download the asset.
-        -   Commit to `assets` branch.
-    -   **Step 3: Rewrite:** Replace the Release Asset link with the permanent `raw.githubusercontent.com` link in the Issue Body.
-2.  **Implement Route Detail Screen:**
-    -   Add a Map View component.
+    -   **Step 1: Upload (Drop):** Modify App to upload GeoJSON to a specific GitHub Release asset.
+    -   **Step 2: Ingest (Action):** Update `update-file-to-issue.yml` to commit asset to repo.
+    -   **Step 3: Rewrite:** Update Issue Body with permanent link.
+2.  **Secure Authentication (Fix Security Issue):**
+    -   **Problem:** Current implementation exposes GitHub `client_secret` and uses an unstable 3rd party CORS proxy.
+    -   **Solution:** Deploy a lightweight **Cloudflare Worker** (Free Tier) to act as the Token Exchange Service.
+    -   **Flow:** App -> Cloudflare Worker (Exchange Code) -> GitHub -> Return Token.
+    -   **Benefit:** Secures credentials and removes reliance on `cors-anywhere`.
+
+### Phase 2: Enhanced Experience (UI/UX & Mobile)
+**Goal:** Polish the user interface and native mobile experience.
+1.  **UI/UX Improvements:**
+    -   **Feedback:** Implement Skeleton Loaders for data fetching and better upload progress indicators.
+    -   **Visuals:** Unify spacing and typography using React Native Paper theme. Add subtle animations (Reanimated) for list transitions.
+2.  **Mobile App Native Correspondence:**
+    -   **Deep Linking:** Configure `oproutes://` scheme to handle OAuth redirects seamlessly on iOS and Android (replacing web-based redirects).
+    -   **Permissions:** Improve handling of Native Permissions (Camera, Photo Library, File System) with explanatory dialogs before requesting.
+    -   **Native Polish:** Update Splash Screen, Adaptive Icons, and Status Bar handling for a "Store-ready" feel.
+
+### Phase 3: Discovery & Community (Future)
+**Goal:** Make it easier to find routes and build community.
+1.  **Implement Route Detail Screen:**
+    -   Add a Map View component (`react-native-maps`).
     -   Visualize the GeoJSON path on the map.
-
-### Phase 2: Enhanced Discovery (Mid-term)
-**Goal:** Make it easier to find relevant routes.
-1.  **Advanced Filtering:**
+2.  **Advanced Filtering:**
     -   Implement UI for filtering by Distance, Duration, Difficulty, and Activity Type.
-2.  **Map-based Search:**
-    -   Show all routes on a global map.
-
-### Phase 3: Community & Reliability (Long-term)
-**Goal:** Build resilience and community features.
-1.  **Image Healer Bot (Resilience):**
-    -   Instead of archiving all images (which bloats the repo), develop a scheduled task.
-    -   **Logic:** If an external image link (Imgur) becomes 404, the bot uses the archived GeoJSON to generate a static map image of the route path and replaces the broken link in the Issue Body.
-2.  **User Profiles & Social:**
-    -   "My Routes" and Comments integration.
+3.  **Image Healer Bot (Resilience):**
+    -   Automated recovery of broken image links using GeoJSON data.
 
 ## Technical Requirements
 -   **GitHub API:** Permissions to upload assets to Releases.
--   **GitHub Actions:** `update-file-to-issue.yml` modifications.
+-   **Serverless Function:** Cloudflare Worker or Vercel Function for Auth.
+-   **Mobile:** Configuration of `app.json` for Deep Linking (`scheme`).
 -   **Map Library:** `react-native-maps`.
