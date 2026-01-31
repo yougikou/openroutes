@@ -1,0 +1,22 @@
+name: Deploy Cloudflare Worker
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'worker/**' # 只有当 worker 目录下的文件变动时才触发，节省资源
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: 'worker' # 告诉 Action 进入 worker 目录执行命令
+          # 如果你的 worker 不需要 install 任何 npm 包，这行就够了

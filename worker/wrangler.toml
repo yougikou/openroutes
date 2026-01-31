@@ -1,0 +1,9 @@
+name = "github-auth-worker" # 你的 Worker 名字
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+# 这是一个占位符，真正的 Client Secret 不要写在这里！
+# 真正的 Secret 我们稍后在 Cloudflare 后台设置。
+[vars]
+GITHUB_CLIENT_ID = "cd019fec05aa5b74ad81"
+# 注意：CLIENT_SECRET 不放在这里，通过 Cloudflare 加密环境变量注入
