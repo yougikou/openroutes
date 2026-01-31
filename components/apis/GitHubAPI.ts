@@ -92,14 +92,10 @@ export interface RouteFilters {
   [key: string]: string | number | undefined;
 }
 
-const fallbackRepoInfo = (() => {
-  const repoSlug = process.env.GITHUB_REPOSITORY ?? 'yougikou/yougikou.github.io';
-  const parts = repoSlug.split('/');
-  return {
-    owner: parts[0] ?? 'yougikou',
-    repo: parts[1] ?? 'yougikou.github.io',
-  };
-})();
+const fallbackRepoInfo = {
+  owner: 'yougikou',
+  repo: 'yougikou.github.io',
+};
 
 const resolveRepoInfo = () => {
   const owner = process.env.EXPO_PUBLIC_GITHUB_OWNER ?? fallbackRepoInfo.owner;
