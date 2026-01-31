@@ -420,16 +420,27 @@ export const uploadGeoJsonFile = async (
   return uploadAssetToRelease(token, release.upload_url, geoJsonBlob, fileName, 'application/json');
 };
 
-export const uploadImgFile = async (
-  base64Data: string,
-  token: string,
-  fileName: string,
-  mimeType: string = 'image/jpeg'
-): Promise<string> => {
-  // Convert base64 to Blob
-  const response = await fetch(`data:${mimeType};base64,${base64Data}`);
-  const blob = await response.blob();
+export const uploadImgFile = async (base64Data: string): Promise<string> => {
+  return uploadImgToImgur(base64Data);
+};
 
-  const release = await getOrCreateInboxRelease(token);
-  return uploadAssetToRelease(token, release.upload_url, blob, fileName, mimeType);
+const uploadImgToImgur = async (base64Data: string): Promise<string> => {
+  try {
+    const formData = new FormData();
+    formData.append('image', base64Data);
+
+    const response = await fetch('https://api.imgur.com/3/image', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Client-ID d429872aeaa174c',
+        Accept: 'application/json',
+      },
+      body: formData,
+    });
+    const resJson = (await response.json()) as { data: { link: string } };
+    return resJson.data.link;
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    throw error;
+  }
 };

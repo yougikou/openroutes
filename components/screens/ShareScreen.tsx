@@ -226,14 +226,7 @@ export default function ShareScreen() {
         const subparts = parts[1].split(',');
         if (parts.length === 2 && subparts.length === 2) {
           const base64Data = subparts[1];
-          // Try to guess extension from mime type
-          const mimeType = parts[0].split(':')[1];
-          let ext = 'jpg';
-          if (mimeType === 'image/png') ext = 'png';
-          else if (mimeType === 'image/gif') ext = 'gif';
-
-          const imgFileName = `${sanitizedName}_${timestamp}.${ext}`;
-          imgURL = await uploadImgFile(base64Data, githubToken, imgFileName, mimeType);
+          imgURL = await uploadImgFile(base64Data);
         }
       }
 
