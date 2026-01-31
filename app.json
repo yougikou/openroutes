@@ -27,7 +27,17 @@
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/favicon.png",
-      "basePath": "openroutes"
+      "basePath": "openroutes",
+      "display": "standalone",
+      "startUrl": "/openroutes/",
+      "shortName": "OpenRoutes",
+      "name": "OpenRoutes",
+      "backgroundColor": "#FFFFFF",
+      "themeColor": "#00BA63",
+      "description": "Serverless route sharing platform",
+      "dir": "auto",
+      "lang": "en",
+      "orientation": "portrait"
     },
     "extra": {
       "eas": {
