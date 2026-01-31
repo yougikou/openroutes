@@ -368,6 +368,9 @@ export default function ShareScreen() {
             </View>
 
             <View style={{ padding: 16 }}>
+              <Text variant="titleLarge" style={{ fontWeight: 'bold', marginBottom: 16 }}>
+                {routeData.name || i18n.t('share_card_no_title')}
+              </Text>
               <RouteDashboard date={routeData.date} distance={routeData.distance_km} duration={routeData.duration_hour} theme={theme} />
             </View>
           </Surface>
@@ -389,16 +392,19 @@ export default function ShareScreen() {
           {/* SECTION 4: DESCRIPTION */}
           <Surface style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
             <View style={[styles.sectionHeader, { borderBottomColor: theme.colors.outlineVariant }]}>
-              <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>4. Description</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>4. {i18n.t('share_detailed_info') || 'Detailed Info'}</Text>
+                <IconButton icon="pencil-outline" size={20} onPress={() => setDescEditModalVisible(true)} />
+              </View>
             </View>
             <View style={{ padding: 16 }}>
-              <CourseCard
-                routeData={routeData}
-                githubToken={githubToken}
-                setDashEditModalVisible={setDashEditModalVisible}
-                setDescEditModalVisible={setDescEditModalVisible}
-                theme={theme}
-              />
+              <Pressable onPress={() => setDescEditModalVisible(true)} style={{ minHeight: 80, paddingVertical: 8 }}>
+                {routeData.description ? (
+                  <Text variant="bodyLarge">{routeData.description}</Text>
+                ) : (
+                  <Text variant="bodyLarge" style={{ color: theme.colors.outline, fontStyle: 'italic' }}>{i18n.t('share_card_no_desc') || "Tap to add description..."}</Text>
+                )}
+              </Pressable>
             </View>
           </Surface>
 
@@ -507,28 +513,6 @@ const ProgressCircle = ({ isProcessing }) => {
   return (<></>);
 }
 
-const CourseCard = ({ routeData, githubToken, setDashEditModalVisible, setDescEditModalVisible, theme }) => {
-  return (
-    <View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-        <Text variant="titleLarge" style={{ fontWeight: 'bold', flex: 1 }}>
-          {routeData.name || i18n.t('share_card_no_title')}
-        </Text>
-        <IconButton icon="pencil-outline" onPress={() => setDashEditModalVisible(true)} size={20} />
-      </View>
-
-      <Divider style={{ marginBottom: 8 }} />
-
-      <Pressable onPress={() => setDescEditModalVisible(true)} style={{ minHeight: 80, paddingVertical: 8 }}>
-        {routeData.description ? (
-          <Text variant="bodyLarge">{routeData.description}</Text>
-        ) : (
-          <Text variant="bodyLarge" style={{ color: theme.colors.outline, fontStyle: 'italic' }}>{i18n.t('share_card_no_desc') || "Tap to add description..."}</Text>
-        )}
-      </Pressable>
-    </View>
-  );
-}
 
 const RouteTypeButtons = ({ routeData, updateRouteData }) => {
   return (
