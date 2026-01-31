@@ -267,38 +267,38 @@ export const createIssue = async (routeData: RouteDraft, token: string): Promise
 };
 
 export const exchangeToken = async (code: string): Promise<void> => {
-  const clientId = 'cd019fec05aa5b74ad81';
-  const clientSecret = '51d66fda4e5184bcc7a4ceaf99f78a8cf3acb028';
-  const redirectUri = 'https://yougikou.github.io/openroutes/githubauth';
-  const proxyUrl = 'https://cors-anywhere.azm.workers.dev/';
+  const workerUrl = 'https://github-auth-worker.yougikou.workers.dev/exchange-token';
 
   try {
     await deleteData('github_access_token');
-    const response = await fetch(proxyUrl + 'https://github.com/login/oauth/access_token', {
+    const response = await fetch(workerUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
         Accept: 'application/json',
       },
-      body:
-        'client_id=' +
-        clientId +
-        '&client_secret=' +
-        clientSecret +
-        '&code=' +
-        code +
-        '&redirect_uri=' +
-        redirectUri,
+      body: JSON.stringify({ code }),
     });
 
-    const data = (await response.json()) as { access_token?: string };
+    if (!response.ok) {
+      throw new Error('Worker responded with status ' + response.status);
+    }
+
+    const data = (await response.json()) as { access_token?: string; error?: string };
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
     if (data.access_token) {
       await storeData('github_access_token', data.access_token);
     } else {
       console.error('No access token found in response:', data);
+      throw new Error('No access token received');
     }
   } catch (error) {
     console.error('Token exchange error:', error);
+    throw error;
   }
 };
 
