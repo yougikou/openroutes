@@ -92,6 +92,37 @@ export interface RouteFilters {
   [key: string]: string | number | undefined;
 }
 
+interface GitHubRelease {
+  url: string;
+  assets_url: string;
+  upload_url: string;
+  html_url: string;
+  id: number;
+  tag_name: string;
+  target_commitish: string;
+  name: string;
+  draft: boolean;
+  prerelease: boolean;
+  created_at: string;
+  published_at: string;
+}
+
+interface GitHubReleaseAsset {
+  url: string;
+  id: number;
+  node_id: string;
+  name: string;
+  label: string | null;
+  uploader: IssueUser;
+  content_type: string;
+  state: string;
+  size: number;
+  download_count: number;
+  created_at: string;
+  updated_at: string;
+  browser_download_url: string;
+}
+
 const fallbackRepoInfo = {
   owner: 'yougikou',
   repo: 'yougikou.github.io',
@@ -302,52 +333,103 @@ export const exchangeToken = async (code: string): Promise<void> => {
   }
 };
 
-export const uploadGeoJsonFile = async (geoJsonData: FeatureCollection): Promise<string> => {
+const getOrCreateInboxRelease = async (token: string): Promise<GitHubRelease> => {
+  const { owner, repo } = resolveRepoInfo();
+  const tagName = 'inbox';
+
+  // 1. Check if release exists
+  const getUrl = `https://api.github.com/repos/${owner}/${repo}/releases/tags/${tagName}`;
+  const getResponse = await fetch(getUrl, {
+    headers: {
+      Authorization: `token ${token}`,
+      Accept: 'application/vnd.github.v3+json',
+    },
+  });
+
+  if (getResponse.ok) {
+    return (await getResponse.json()) as GitHubRelease;
+  }
+
+  if (getResponse.status !== 404) {
+    throw new Error(`Failed to check for inbox release: ${getResponse.status}`);
+  }
+
+  // 2. Create release if not exists
+  const createUrl = `https://api.github.com/repos/${owner}/${repo}/releases`;
+  const createResponse = await fetch(createUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `token ${token}`,
+      Accept: 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      tag_name: tagName,
+      name: 'Inbox',
+      body: 'Storage for uploaded files.',
+      draft: false,
+      prerelease: false,
+    }),
+  });
+
+  if (!createResponse.ok) {
+    const errorBody = await createResponse.text();
+    throw new Error(`Failed to create inbox release: ${createResponse.status} ${errorBody}`);
+  }
+
+  return (await createResponse.json()) as GitHubRelease;
+};
+
+const uploadAssetToRelease = async (
+  token: string,
+  uploadUrlTemplate: string,
+  fileBlob: Blob,
+  fileName: string,
+  contentType: string
+): Promise<string> => {
+  // Remove the templated part {?name,label}
+  const uploadUrl = uploadUrlTemplate.replace(/\{.*?\}/, '') + `?name=${encodeURIComponent(fileName)}`;
+
+  const response = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `token ${token}`,
+      'Content-Type': contentType,
+      Accept: 'application/vnd.github.v3+json',
+    },
+    body: fileBlob,
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Failed to upload asset: ${response.status} ${errorBody}`);
+  }
+
+  const asset = (await response.json()) as GitHubReleaseAsset;
+  // browser_download_url is the permanent link
+  return asset.browser_download_url;
+};
+
+export const uploadGeoJsonFile = async (
+  geoJsonData: FeatureCollection,
+  token: string,
+  fileName: string
+): Promise<string> => {
   const geoJsonBlob = new Blob([JSON.stringify(geoJsonData)], { type: 'application/json' });
-  return uploadToFileIO(geoJsonBlob, 'geojson.json');
+  const release = await getOrCreateInboxRelease(token);
+  return uploadAssetToRelease(token, release.upload_url, geoJsonBlob, fileName, 'application/json');
 };
 
-export const uploadImgFile = async (base64Data: string): Promise<string> => {
-  return uploadImgToImgur(base64Data);
-};
+export const uploadImgFile = async (
+  base64Data: string,
+  token: string,
+  fileName: string,
+  mimeType: string = 'image/jpeg'
+): Promise<string> => {
+  // Convert base64 to Blob
+  const response = await fetch(`data:${mimeType};base64,${base64Data}`);
+  const blob = await response.blob();
 
-const uploadToFileIO = async (fileBlob: Blob, fileName: string): Promise<string> => {
-  try {
-    const formData = new FormData();
-    formData.append('file', fileBlob, fileName);
-    formData.append('expires', '1d');
-    formData.append('maxDownloads', '1');
-    formData.append('autoDelete', 'true');
-
-    const response = await fetch('https://file.io/', {
-      method: 'POST',
-      body: formData,
-    });
-    const resJson = (await response.json()) as { link: string };
-    return resJson.link;
-  } catch (error) {
-    console.error('Error uploading file:', error);
-    throw error;
-  }
-};
-
-const uploadImgToImgur = async (base64Data: string): Promise<string> => {
-  try {
-    const formData = new FormData();
-    formData.append('image', base64Data);
-
-    const response = await fetch('https://api.imgur.com/3/image', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Client-ID d429872aeaa174c',
-        Accept: 'application/json',
-      },
-      body: formData,
-    });
-    const resJson = (await response.json()) as { data: { link: string } };
-    return resJson.data.link;
-  } catch (error) {
-    console.error('Error uploading file:', error);
-    throw error;
-  }
+  const release = await getOrCreateInboxRelease(token);
+  return uploadAssetToRelease(token, release.upload_url, blob, fileName, mimeType);
 };

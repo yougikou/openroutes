@@ -213,29 +213,40 @@ export default function ShareScreen() {
         throw new Error(`Input data invalid. Geojson: ${routeData.geojsonData != null} Course date: ${routeData.date} Course name: ${routeData.name})`);
       }
 
-      if (process.env.NODE_ENV === 'production') {
-        let imgURL = null;
-        if (routeData.imgUri && routeData.imgUri.includes(';') && routeData.imgUri.includes(',')) {
-          const parts = routeData.imgUri.split(';');
-          const subparts = parts[1].split(',');
-          if (parts.length === 2 && subparts.length === 2) {
-            const base64Data = subparts[1];
-            imgURL = await uploadImgFile(base64Data);
-          }
-        }
-
-        const jsonURL = await uploadGeoJsonFile(routeData.geojsonData);
-        setRouteData((prevRouteData) => ({
-          ...prevRouteData,
-          coverimg: imgURL,
-          geojson: jsonURL,
-        }));
-
-        await createIssue({ ...routeData, coverimg: imgURL, geojson: jsonURL }, githubToken)
-      } else {
-        console.log("In development: sleep 5s")
-        await new Promise(resolve => setTimeout(resolve, 5000));
+      if (!githubToken) {
+        throw new Error("GitHub token is missing");
       }
+
+      const timestamp = new Date().getTime();
+      const sanitizedName = (routeData.originFileName || routeData.name || 'route').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
+      let imgURL = null;
+      if (routeData.imgUri && routeData.imgUri.includes(';') && routeData.imgUri.includes(',')) {
+        const parts = routeData.imgUri.split(';');
+        const subparts = parts[1].split(',');
+        if (parts.length === 2 && subparts.length === 2) {
+          const base64Data = subparts[1];
+          // Try to guess extension from mime type
+          const mimeType = parts[0].split(':')[1];
+          let ext = 'jpg';
+          if (mimeType === 'image/png') ext = 'png';
+          else if (mimeType === 'image/gif') ext = 'gif';
+
+          const imgFileName = `${sanitizedName}_${timestamp}.${ext}`;
+          imgURL = await uploadImgFile(base64Data, githubToken, imgFileName, mimeType);
+        }
+      }
+
+      const jsonFileName = `${sanitizedName}_${timestamp}.geojson`;
+      const jsonURL = await uploadGeoJsonFile(routeData.geojsonData, githubToken, jsonFileName);
+
+      setRouteData((prevRouteData) => ({
+        ...prevRouteData,
+        coverimg: imgURL,
+        geojson: jsonURL,
+      }));
+
+      await createIssue({ ...routeData, coverimg: imgURL, geojson: jsonURL }, githubToken);
 
       onToggleSnackBar(i18n.t('share_submit_confirmed'));
     } catch (error) {
