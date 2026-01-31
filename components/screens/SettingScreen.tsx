@@ -1,53 +1,84 @@
 import React, { useEffect, useState } from 'react';
-import * as AuthSession from 'expo-auth-session';
-import { View, StyleSheet, useWindowDimensions, ScrollView } from 'react-native';
-import { useRoute } from '@react-navigation/native';
-import { Appbar, List, useTheme, Surface, Text, Button, Divider, Avatar } from 'react-native-paper';
+import { View, StyleSheet, useWindowDimensions, ScrollView, ActivityIndicator, Linking, Platform } from 'react-native';
+import { Appbar, List, useTheme, Surface, Text, Button, Divider, Avatar, Banner } from 'react-native-paper';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import i18n from '../i18n/i18n';
-import { readData } from '../apis/StorageAPI';
+import { readData, deleteData } from '../apis/StorageAPI';
+import { exchangeToken } from '../apis/GitHubAPI';
 import Redirector from '../Redirector';
 import { useLanguage } from '../i18n/LanguageContext';
 import { SUPPORTED_LANGUAGES } from '../i18n/supportedLanguages';
 
 const GITHUB_CLIENT_ID = 'cd019fec05aa5b74ad81';
-const redirectUri = AuthSession.makeRedirectUri({
-  path: 'openroutes/githubauth',
-});
 
 const SettingScreen = (): React.ReactElement => {
   const theme = useTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const contentMaxWidth = isDesktop ? 800 : '100%';
+  const router = useRouter();
+  const { code } = useLocalSearchParams();
 
   const [githubToken, setGithubToken] = useState<string | null>(null);
+  const [isExchanging, setIsExchanging] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [, response, promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: GITHUB_CLIENT_ID,
-      scopes: ['identity', 'public_repo'],
-      redirectUri,
-    },
-    { authorizationEndpoint: 'https://github.com/login/oauth/authorize' },
-  );
-
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { code } = response.params ?? {};
-      console.log('Received GitHub auth code', code);
+  const handleConnect = () => {
+    // Self-contained Auth Flow:
+    // Open GitHub Authorize URL. We omit redirect_uri to let GitHub use the default registered callback,
+    // which should be this Settings page (as per user instructions).
+    // This avoids mismatch errors with the Worker which does not send redirect_uri during exchange.
+    const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=identity%20public_repo`;
+    if (Platform.OS === 'web') {
+      window.location.href = authUrl;
+    } else {
+      Linking.openURL(authUrl);
     }
-  }, [response]);
+  };
 
-  const route = useRoute();
+  const handleDisconnect = async () => {
+     await deleteData('github_access_token');
+     setGithubToken(null);
+  };
+
   useEffect(() => {
-    const fetchToken = async () => {
+    const checkAuth = async () => {
+      // 1. Check if we already have a token
       const token = await readData('github_access_token');
       if (token) {
         setGithubToken(token);
+        // If we have a token but URL still has code, clean it up
+        if (code) {
+             router.setParams({ code: undefined });
+        }
+        return;
+      }
+
+      // 2. If no token, check if we have a code in URL to exchange
+      if (code && typeof code === 'string' && !isExchanging) {
+        setIsExchanging(true);
+        setErrorMsg(null);
+        try {
+          await exchangeToken(code);
+          const newToken = await readData('github_access_token');
+          if (newToken) {
+            setGithubToken(newToken);
+          } else {
+             setErrorMsg('Failed to retrieve token.');
+          }
+        } catch (e: any) {
+          console.error(e);
+          setErrorMsg(e.message || 'Failed to connect to GitHub.');
+        } finally {
+          setIsExchanging(false);
+          // 3. Clean URL (remove ?code=...)
+          router.setParams({ code: undefined });
+        }
       }
     };
-    fetchToken();
-  }, [route]);
+
+    checkAuth();
+  }, [code]);
 
   // Adjust container padding based on screen size
   const containerPadding = isDesktop ? 24 : 16;
@@ -70,6 +101,22 @@ const SettingScreen = (): React.ReactElement => {
       <ScrollView contentContainerStyle={{ alignItems: 'center' }}>
         <View style={{ width: '100%', maxWidth: contentMaxWidth, padding: containerPadding }}>
 
+          {/* Error Banner */}
+          <Banner
+            visible={!!errorMsg}
+            actions={[
+              {
+                label: 'Dismiss',
+                onPress: () => setErrorMsg(null),
+              },
+            ]}
+            icon={({size}) => (
+              <Avatar.Icon size={size} icon="alert-circle" style={{backgroundColor: theme.colors.errorContainer}} color={theme.colors.error} />
+            )}
+          >
+            {errorMsg}
+          </Banner>
+
           {/* Account Settings Section */}
           <View style={styles.sectionTitleContainer}>
             <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>
@@ -78,12 +125,17 @@ const SettingScreen = (): React.ReactElement => {
           </View>
 
           <Surface style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={1}>
-            {githubToken ? (
+            {isExchanging ? (
+               <View style={styles.loadingState}>
+                  <ActivityIndicator size="large" color={theme.colors.primary} />
+                  <Text style={{ marginTop: 16 }}>Connecting to GitHub...</Text>
+               </View>
+            ) : githubToken ? (
               <View style={styles.connectedState}>
                 <Avatar.Icon size={48} icon="check-bold" style={{ backgroundColor: theme.colors.primaryContainer }} color={theme.colors.onPrimaryContainer} />
                 <TitleSection title="GitHub Connected" subtitle="Your account is linked and ready to sync routes." />
-                <Button mode="outlined" textColor={theme.colors.error} onPress={() => { /* Logout Logic if needed */ }}>
-                  Disconnect (TODO)
+                <Button mode="outlined" textColor={theme.colors.error} onPress={handleDisconnect}>
+                  Disconnect
                 </Button>
               </View>
             ) : (
@@ -91,7 +143,7 @@ const SettingScreen = (): React.ReactElement => {
                 title={i18n.t('setting_github_oauth')}
                 description="Connect to GitHub to backup and share your routes."
                 left={(props) => <List.Icon {...props} icon="github" color={theme.colors.onSurface} />}
-                right={(props) => <Button mode="contained" compact style={{ alignSelf: 'center', marginLeft: 8 }} onPress={() => void promptAsync()}>Connect</Button>}
+                right={(props) => <Button mode="contained" compact style={{ alignSelf: 'center', marginLeft: 8 }} onPress={handleConnect}>Connect</Button>}
                 style={{ paddingVertical: 12 }}
                 titleStyle={{ fontWeight: 'bold' }}
               />
@@ -137,7 +189,7 @@ const SettingScreen = (): React.ReactElement => {
               title="Open Source"
               description="Visit our repository"
               left={(props) => <List.Icon {...props} icon="code-tags" />}
-              onPress={() => { /* Link to repo */ }}
+              onPress={() => Linking.openURL('https://github.com/yougikou/openroutes')}
             />
           </Surface>
 
@@ -147,7 +199,7 @@ const SettingScreen = (): React.ReactElement => {
   );
 };
 
-const TitleSection = ({ title, subtitle }) => (
+const TitleSection = ({ title, subtitle }: {title: string, subtitle: string}) => (
   <View style={{ flex: 1, marginLeft: 16 }}>
     <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>{title}</Text>
     <Text variant="bodyMedium" style={{ opacity: 0.7 }}>{subtitle}</Text>
@@ -177,6 +229,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16
+  },
+  loadingState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24
   }
 });
 
