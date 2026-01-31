@@ -6,6 +6,8 @@ import { Appbar, List, useTheme, Surface, Text, Button, Divider, Avatar } from '
 import i18n from '../i18n/i18n';
 import { readData } from '../apis/StorageAPI';
 import Redirector from '../Redirector';
+import { useLanguage } from '../i18n/LanguageContext';
+import { SUPPORTED_LANGUAGES } from '../i18n/supportedLanguages';
 
 const GITHUB_CLIENT_ID = 'cd019fec05aa5b74ad81';
 const redirectUri = AuthSession.makeRedirectUri({
@@ -49,6 +51,7 @@ const SettingScreen = (): React.ReactElement => {
 
   // Adjust container padding based on screen size
   const containerPadding = isDesktop ? 24 : 16;
+  const { locale, changeLanguage } = useLanguage();
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -93,6 +96,28 @@ const SettingScreen = (): React.ReactElement => {
                 titleStyle={{ fontWeight: 'bold' }}
               />
             )}
+          </Surface>
+
+          {/* Language Settings Section */}
+          <View style={[styles.sectionTitleContainer, { marginTop: 24 }]}>
+            <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>
+              Language / 言語 / 语言
+            </Text>
+          </View>
+          <Surface style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={1}>
+            <List.Accordion
+              title={SUPPORTED_LANGUAGES.find((l) => l.code === locale)?.label || 'Select Language'}
+              left={(props) => <List.Icon {...props} icon="translate" />}
+            >
+              {SUPPORTED_LANGUAGES.map((lang) => (
+                <List.Item
+                  key={lang.code}
+                  title={lang.label}
+                  right={(props) => (lang.code === locale ? <List.Icon {...props} icon="check" /> : null)}
+                  onPress={() => changeLanguage(lang.code)}
+                />
+              ))}
+            </List.Accordion>
           </Surface>
 
           {/* App Info Section (Example) */}
