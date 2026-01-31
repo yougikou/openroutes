@@ -39,7 +39,7 @@ export const translations: Record<Locale, TranslationDictionary> = {
     share_submit: 'Submit',
     share_submit_confirmed: 'Route info is submitted. Thank you for sharing. \nYou can view it in exploring screen now. ',
     setting_account: 'Account',
-    setting_github_oauth: 'GithubOAuth Setting',
+    setting_github_oauth: 'Github OAuth Setting',
     github_auth_success: 'Github OAuth Success\nPlease close this window',
     github_auth_failed: 'Github OAuth Failed. Please retry or create issue',
     confirm: 'Okay',
@@ -156,3 +156,9 @@ export const translations: Record<Locale, TranslationDictionary> = {
 };
 
 export type SupportedLocale = keyof typeof translations;
+
+export const SUPPORTED_LANGUAGES: { code: SupportedLocale; label: string }[] = [
+  { code: 'en', label: 'English' },
+  { code: 'zh', label: '中文' },
+  { code: 'ja', label: '日本語' },
+];
