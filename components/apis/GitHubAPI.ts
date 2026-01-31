@@ -98,8 +98,8 @@ const fallbackRepoInfo = {
 };
 
 const resolveRepoInfo = () => {
-  const owner = process.env.EXPO_PUBLIC_GITHUB_OWNER ?? fallbackRepoInfo.owner;
-  const repo = process.env.EXPO_PUBLIC_GITHUB_REPO ?? fallbackRepoInfo.repo;
+  const owner = process.env.EXPO_PUBLIC_GITHUB_OWNER || fallbackRepoInfo.owner;
+  const repo = process.env.EXPO_PUBLIC_GITHUB_REPO || fallbackRepoInfo.repo;
   return { owner, repo };
 };
 
