@@ -80,6 +80,10 @@ jobs:
 
           git add geojson/"$FILENAME"
           git commit -m "Add route file for issue #${{ github.event.issue.number }}"
+
+          # Handle concurrent pushes by rebasing
+          git pull --rebase origin assets || echo "Rebase failed or not needed (e.g. orphan branch)"
+
           git push origin assets
 
       - name: Update Issue
@@ -153,7 +157,7 @@ jobs:
             const asset = release.assets.find(a => a.name === assetName);
 
             if (!asset) {
-               console.log(`Asset '${assetName}' not found in release 'inbox'. Available assets: ${release.assets.map(a => a.name).join(', ')}`);
+               console.log(`Asset '${assetName}' not found in release 'inbox'. It may have been deleted already. Available assets: ${release.assets.map(a => a.name).join(', ')}`);
                return;
             }
 
@@ -166,6 +170,11 @@ jobs:
               });
               console.log(`Successfully deleted asset '${assetName}' (id: ${asset.id})`);
             } catch (e) {
-              console.log(`Failed to delete asset. Error: ${e.message}`);
-              throw e;
+              // If it's a 404, we can ignore it as "already deleted"
+              if (e.status === 404) {
+                 console.log(`Asset '${assetName}' (id: ${asset.id}) not found (404) during deletion. Considered already deleted.`);
+              } else {
+                 console.log(`Failed to delete asset. Error: ${e.message}`);
+                 throw e;
+              }
             }
