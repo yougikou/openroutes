@@ -17,7 +17,7 @@ OpenRoutesは、React Native (Expo) で構築された、サーバーレスの�
 -   **認証:** GitHub OAuth
 -   **ストレージ (現状):**
     -   画像: Imgur API
-    -   GeoJSON (ルートデータ): File.io (※一時保存のため、永続化が課題)
+    -   GeoJSON (ルートデータ): GitHub Releases (Inbox) -> GitHub Repo (Assets Branch)
 
 ## 機能
 1.  **ルート一覧 (Explore)**
@@ -42,6 +42,28 @@ OpenRoutesは、React Native (Expo) で構築された、サーバーレスの�
 ```bash
 npm install
 ```
+
+### 環境変数設定
+
+#### ローカル開発 (`.env`)
+プロジェクトルートに `.env` ファイルを作成し、以下の変数を設定してください。
+
+```ini
+# データソースとなるGitHubリポジトリの所有者
+EXPO_PUBLIC_GITHUB_OWNER=your_github_username
+# データソースとなるGitHubリポジトリ名
+EXPO_PUBLIC_GITHUB_REPO=your_repo_name
+```
+
+#### GitHub Actions Secrets
+CI/CD (GitHub Actions) を利用する場合、リポジトリの Settings > Secrets and variables > Actions に以下のシークレットを設定する必要があります。
+
+- **必須**
+    - `EXPO_PUBLIC_GITHUB_OWNER`: データソースのGitHubユーザー名
+    - `EXPO_PUBLIC_GITHUB_REPO`: データソースのリポジトリ名
+
+- **オプション (データソースリポジトリがアプリリポジトリと異なる場合)**
+    - `ACCESS_TOKEN`: データソースリポジトリへ書き込み権限（Workflowの同期など）を持つPersonal Access Token (PAT)
 
 ### 実行
 ```bash
