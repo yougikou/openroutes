@@ -16,6 +16,6 @@ Traceback (most recent call last):
   File "/home/jules/.pyenv/versions/3.12.12/lib/python3.12/socketserver.py", line 478, in server_bind
     self.socket.bind(self.server_address)
 OSError: [Errno 98] Address already in use
-127.0.0.1 - - [01/Feb/2026 11:35:10] "GET /openroutes/share/ HTTP/1.1" 200 -
-127.0.0.1 - - [01/Feb/2026 11:35:10] "GET /openroutes/_expo/static/js/web/entry-5f9fc71ac425ec84ab978747b5f8bbc5.js HTTP/1.1" 200 -
-127.0.0.1 - - [01/Feb/2026 11:35:11] "GET /openroutes/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.6e435534bd35da5fef04168860a9b8fa.ttf HTTP/1.1" 200 -
+127.0.0.1 - - [01/Feb/2026 11:38:47] "GET /openroutes/share/ HTTP/1.1" 200 -
+127.0.0.1 - - [01/Feb/2026 11:38:47] "GET /openroutes/_expo/static/js/web/entry-c286c6bcc2b0079ff617cb79ed1516bf.js HTTP/1.1" 200 -
+127.0.0.1 - - [01/Feb/2026 11:38:47] "GET /openroutes/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.6e435534bd35da5fef04168860a9b8fa.ttf HTTP/1.1" 200 -

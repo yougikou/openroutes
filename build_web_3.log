@@ -1,0 +1,31 @@
+
+> openroutes@1.0.0 predeploy
+> expo export -p web
+
+[33m[1mWarning: [22mRoot-level [1m"expo"[22m object found. Ignoring extra keys in Expo config: "scheme", "platforms"
+[90mLearn more: https://expo.fyi/root-expo-object[0m[0m
+env: load .env
+env: export EXPO_PUBLIC_GITHUB_OWNER EXPO_PUBLIC_GITHUB_REPO GITHUB_REPOSITORY
+
+Using (experimental) base path: /openroutes
+Starting Metro Bundler
+Static rendering is enabled. Learn more: https://docs.expo.dev/router/reference/static-rendering/
+Web node_modules/expo-router/entry.js ▓▓▓░░░░░░░░░░░░░ 19.2% (134/306)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 60.5% (424/545)
+λ Bundled 4528ms node_modules/expo-router/node/render.js (1684 modules)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1831/1831)
+Web Bundled 5792ms node_modules/expo-router/entry.js (1831 modules)
+
+› web bundles (1):
+_expo/static/js/web/entry-c286c6bcc2b0079ff617cb79ed1516bf.js (3.44 MB)
+
+› Static routes (7):
+/ (index) (21.9 kB)
+/share (21.9 kB)
+/detail (21.9 kB)
+/setting (21.9 kB)
+/_sitemap (21.8 kB)
+/githubauth (21.9 kB)
+/+not-found (21.8 kB)
+
+Exported: dist
