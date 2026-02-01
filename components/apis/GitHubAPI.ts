@@ -279,7 +279,7 @@ export const createIssue = async (routeData: RouteDraft, token: string): Promise
       description: routeData.description ?? '',
       coverimg: coverImageMarkdown,
       geojson: geojsonMarkdown,
-    }, { lineWidth: -1 }),
+    }, { lineWidth: -1, forceQuotes: true }),
     labels: [routeData.type, routeData.difficulty, 'route'],
   };
 
