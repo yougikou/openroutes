@@ -383,7 +383,7 @@ const getOrCreateInboxRelease = async (token: string): Promise<GitHubRelease> =>
 const uploadAssetToRelease = async (
   token: string,
   uploadUrlTemplate: string,
-  fileBlob: Blob,
+  fileData: string | Blob,
   fileName: string,
   contentType: string
 ): Promise<string> => {
@@ -397,11 +397,12 @@ const uploadAssetToRelease = async (
       'Content-Type': contentType,
       Accept: 'application/vnd.github.v3+json',
     },
-    body: fileBlob,
+    body: fileData,
   });
 
   if (!response.ok) {
     const errorBody = await response.text();
+    console.error(`Failed to upload asset to ${uploadUrl}: ${response.status} ${errorBody}`);
     throw new Error(`Failed to upload asset: ${response.status} ${errorBody}`);
   }
 
@@ -415,9 +416,9 @@ export const uploadGeoJsonFile = async (
   token: string,
   fileName: string
 ): Promise<string> => {
-  const geoJsonBlob = new Blob([JSON.stringify(geoJsonData)], { type: 'application/json' });
+  const geoJsonString = JSON.stringify(geoJsonData);
   const release = await getOrCreateInboxRelease(token);
-  return uploadAssetToRelease(token, release.upload_url, geoJsonBlob, fileName, 'application/json');
+  return uploadAssetToRelease(token, release.upload_url, geoJsonString, fileName, 'application/json');
 };
 
 export const uploadImgFile = async (base64Data: string): Promise<string> => {

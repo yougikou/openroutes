@@ -244,6 +244,7 @@ export default function ShareScreen() {
       onToggleSnackBar(i18n.t('share_submit_confirmed'));
     } catch (error) {
       console.error("Error:", error);
+      onToggleSnackBar("Upload failed: " + error.message);
     } finally {
       setIsProcessing(false);
       // reset input
