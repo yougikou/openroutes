@@ -43,3 +43,37 @@ jobs:
           EXPO_PUBLIC_GITHUB_OWNER: ${{ secrets.EXPO_PUBLIC_GITHUB_OWNER }}
           EXPO_PUBLIC_GITHUB_REPO: ${{ secrets.EXPO_PUBLIC_GITHUB_REPO }}
         run: npm run deploy
+
+      - name: Deploy Workflow to Data Repo
+        if: secrets.EXPO_PUBLIC_GITHUB_REPO != '' && secrets.EXPO_PUBLIC_GITHUB_REPO != github.event.repository.name
+        env:
+          TARGET_OWNER: ${{ secrets.EXPO_PUBLIC_GITHUB_OWNER }}
+          TARGET_REPO: ${{ secrets.EXPO_PUBLIC_GITHUB_REPO }}
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        run: |
+          if [ -z "$ACCESS_TOKEN" ]; then
+            echo "No ACCESS_TOKEN secret found, skipping workflow sync."
+            exit 0
+          fi
+
+          echo "Syncing workflow to $TARGET_OWNER/$TARGET_REPO"
+
+          # Clone target repo
+          git clone https://x-access-token:$ACCESS_TOKEN@github.com/$TARGET_OWNER/$TARGET_REPO.git target_repo
+
+          cd target_repo
+          mkdir -p .github/workflows
+
+          # Copy the updated workflow file from the source checkout
+          cp ../.github/workflows/update-file-to-issue.yml .github/workflows/
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes to workflow file."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .github/workflows/update-file-to-issue.yml
+            git commit -m "Update route processing workflow from app repo"
+            git push origin main
+            echo "Pushed updated workflow to data repo."
+          fi
