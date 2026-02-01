@@ -12,7 +12,9 @@ import togpx from 'togpx';
 import Redirector from '../Redirector';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { downloadFile } from '../../utils/FileHelper';
+import { convertBlobUrlToRawUrl } from '../../utils/url';
 
 const FILTERS: RouteFilters = { state: 'all' };
 const PER_PAGE = 10;
@@ -27,11 +29,8 @@ const INITIAL_SNACKBAR_STATE: SnackbarState = {
   message: '',
 };
 
-const convertBlobUrlToRawUrl = (githubBlobUrl: string): string => {
-  return githubBlobUrl.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
-};
-
 const HomeScreen = (): React.ReactElement => {
+  const router = useRouter();
   const theme = useTheme();
   const { width } = useWindowDimensions();
 
@@ -242,6 +241,20 @@ const HomeScreen = (): React.ReactElement => {
                   <Button mode="text" compact onPress={() => downloadKmlFile(item.title, geoJsonUri)} disabled={!geoJsonUri} labelStyle={{ fontSize: 12 }}>
                     KML
                   </Button>
+                  <IconButton
+                    icon="map-search-outline"
+                    size={20}
+                    iconColor={theme.colors.primary}
+                    disabled={!geoJsonUri}
+                    onPress={() => {
+                      if (geoJsonUri) {
+                        router.push({
+                          pathname: '/map',
+                          params: { url: geoJsonUri, title: item.title }
+                        });
+                      }
+                    }}
+                  />
                   <IconButton icon="arrow-right" size={20} iconColor={theme.colors.primary} style={{ marginLeft: 'auto', margin: 0 }} onPress={handleToDetail} />
                 </View>
               </View>
