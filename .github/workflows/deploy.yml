@@ -11,6 +11,9 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      EXPO_PUBLIC_GITHUB_OWNER: ${{ secrets.EXPO_PUBLIC_GITHUB_OWNER }}
+      EXPO_PUBLIC_GITHUB_REPO: ${{ secrets.EXPO_PUBLIC_GITHUB_REPO }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,20 +35,15 @@ jobs:
         run: npm ci
 
       - name: Build static site
-        env:
-          EXPO_PUBLIC_GITHUB_OWNER: ${{ secrets.EXPO_PUBLIC_GITHUB_OWNER }}
-          EXPO_PUBLIC_GITHUB_REPO: ${{ secrets.EXPO_PUBLIC_GITHUB_REPO }}
         run: npm run predeploy
 
       - name: Deploy to GitHub Pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EXPO_PUBLIC_GITHUB_OWNER: ${{ secrets.EXPO_PUBLIC_GITHUB_OWNER }}
-          EXPO_PUBLIC_GITHUB_REPO: ${{ secrets.EXPO_PUBLIC_GITHUB_REPO }}
         run: npm run deploy
 
       - name: Deploy Workflow to Data Repo
-        if: secrets.EXPO_PUBLIC_GITHUB_REPO != '' && secrets.EXPO_PUBLIC_GITHUB_REPO != github.event.repository.name
+        if: env.EXPO_PUBLIC_GITHUB_REPO != '' && env.EXPO_PUBLIC_GITHUB_REPO != github.event.repository.name
         env:
           TARGET_OWNER: ${{ secrets.EXPO_PUBLIC_GITHUB_OWNER }}
           TARGET_REPO: ${{ secrets.EXPO_PUBLIC_GITHUB_REPO }}
