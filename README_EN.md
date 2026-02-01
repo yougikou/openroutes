@@ -63,7 +63,9 @@ If using CI/CD (GitHub Actions), you must set the following secrets in Settings 
     - `EXPO_PUBLIC_GITHUB_REPO`: Repository name for the data source.
 
 - **Optional (If data source repo differs from app repo)**
-    - `ACCESS_TOKEN`: A Personal Access Token (PAT) with write permissions to the data source repository (for syncing workflows).
+    - `ACCESS_TOKEN`: A Personal Access Token (PAT) with write permissions to the data source repository.
+        - **Classic PAT:** `repo` (Full control)
+        - **Fine-grained PAT:** `Contents` (Read and write) and `Workflows` (Read and write)
 
 ### Running
 ```bash
