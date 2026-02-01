@@ -72,6 +72,7 @@ jobs:
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add .github/workflows/update-file-to-issue.yml
             git commit -m "Update route processing workflow from app repo"
-            git push origin main
+            BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            git push origin $BRANCH
             echo "Pushed updated workflow to data repo."
           fi
