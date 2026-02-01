@@ -1,5 +1,6 @@
 import yaml from 'js-yaml';
 import type { FeatureCollection } from 'geojson';
+import { Platform } from 'react-native';
 import { deleteData, storeData } from './StorageAPI';
 
 interface IssueAttachment {
@@ -390,7 +391,13 @@ const uploadAssetToRelease = async (
   // Remove the templated part {?name,label}
   const uploadUrl = uploadUrlTemplate.replace(/\{.*?\}/, '') + `?name=${encodeURIComponent(fileName)}`;
 
-  const response = await fetch(uploadUrl, {
+  let fetchUrl = uploadUrl;
+
+  if (Platform.OS === 'web') {
+    fetchUrl = 'https://github-auth-worker.yougikou.workers.dev/proxy-upload?url=' + encodeURIComponent(uploadUrl);
+  }
+
+  const response = await fetch(fetchUrl, {
     method: 'POST',
     headers: {
       Authorization: `token ${token}`,

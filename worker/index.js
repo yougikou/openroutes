@@ -4,7 +4,7 @@ export default {
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*", // 生产环境建议改为 "https://yougikou.github.io"
       "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept",
     };
 
     if (request.method === "OPTIONS") {
@@ -37,6 +37,38 @@ export default {
 
       } catch (e) {
         return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
+      }
+    }
+
+    if (url.pathname === "/proxy-upload" && request.method === "POST") {
+      const targetUrl = url.searchParams.get("url");
+      if (!targetUrl) {
+        return new Response("Missing url param", { status: 400, headers: corsHeaders });
+      }
+
+      // Security check: Only allow uploads to GitHub
+      if (!targetUrl.startsWith("https://uploads.github.com")) {
+        return new Response("Invalid target URL", { status: 403, headers: corsHeaders });
+      }
+
+      try {
+        const proxyRequest = new Request(targetUrl, {
+           method: request.method,
+           headers: request.headers,
+           body: request.body,
+           redirect: 'follow'
+        });
+
+        const response = await fetch(proxyRequest);
+        const newResponse = new Response(response.body, response);
+
+        Object.keys(corsHeaders).forEach(key => {
+            newResponse.headers.set(key, corsHeaders[key]);
+        });
+
+        return newResponse;
+      } catch (e) {
+         return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
       }
     }
 
