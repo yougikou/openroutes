@@ -50,7 +50,9 @@ EXPO_PUBLIC_GITHUB_REPO=your_repo_name
     - `EXPO_PUBLIC_GITHUB_REPO`: 数据源的仓库名称。
 
 - **可选 (当数据源仓库与应用仓库不同时)**
-    - `ACCESS_TOKEN`: 拥有数据源仓库写入权限的个人访问令牌 (PAT) (用于同步 Workflow)。
+    - `ACCESS_TOKEN`: 拥有数据源仓库写入权限的个人访问令牌 (PAT)。
+        - **Classic PAT:** `repo` (完全控制)
+        - **Fine-grained PAT:** `Contents` (读写) 和 `Workflows` (读写)
 
 #### 运行
 ```bash

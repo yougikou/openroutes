@@ -63,7 +63,9 @@ CI/CD (GitHub Actions) を利用する場合、リポジトリの Settings > Sec
     - `EXPO_PUBLIC_GITHUB_REPO`: データソースのリポジトリ名
 
 - **オプション (データソースリポジトリがアプリリポジトリと異なる場合)**
-    - `ACCESS_TOKEN`: データソースリポジトリへ書き込み権限（Workflowの同期など）を持つPersonal Access Token (PAT)
+    - `ACCESS_TOKEN`: データソースリポジトリへ書き込み権限を持つPersonal Access Token (PAT)。
+        - **Classic PAT:** `repo` (Full control)
+        - **Fine-grained PAT:** `Contents` (Read and write) および `Workflows` (Read and write)
 
 ### 実行
 ```bash
