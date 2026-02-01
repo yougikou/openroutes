@@ -706,6 +706,9 @@ const DashEditModal = ({ isVisible, setVisible, routeData, updateRouteData }) =>
 };
 
 const RouteDashboard = ({ date, distance, duration, theme }) => {
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 380;
+
   const styles = StyleSheet.create({
     board: {
       flexDirection: 'row',
@@ -726,16 +729,17 @@ const RouteDashboard = ({ date, distance, duration, theme }) => {
     },
     textStyle: {
       fontWeight: 'bold',
-      fontSize: 20,
+      fontSize: isSmallScreen ? 15 : 20,
       color: theme.colors.onSurfaceVariant,
       marginTop: 4
     },
     unitStyle: {
-      fontSize: 12,
+      fontSize: isSmallScreen ? 10 : 12,
       textTransform: 'uppercase',
-      letterSpacing: 1,
+      letterSpacing: isSmallScreen ? 0 : 1,
       color: theme.colors.onSurfaceVariant,
-      opacity: 0.7
+      opacity: 0.7,
+      textAlign: 'center',
     },
   });
 
