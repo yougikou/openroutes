@@ -31,6 +31,7 @@ type RouteData = {
   geojsonData: FeatureCollection | null;
   coverimg: string | null;
   imgUri: string | null;
+  imgBase64?: string | null;
   geojson: string | null;
 };
 
@@ -47,6 +48,7 @@ const initialRouteData: RouteData = {
   geojsonData: null,
   coverimg: null,
   imgUri: null,
+  imgBase64: null,
   geojson: null,
 };
 
@@ -169,9 +171,12 @@ export default function ShareScreen() {
         'Sorry, we need camera roll permission to upload images.',
       );
     } else {
-      const result = await ImagePicker.launchImageLibraryAsync();
+      const result = await ImagePicker.launchImageLibraryAsync({
+        base64: true,
+      });
       if (!result.canceled && result.assets && result.assets.length > 0) {
         updateRouteData('imgUri', result.assets[0].uri);
+        updateRouteData('imgBase64', result.assets[0].base64);
       }
     }
   };
@@ -221,13 +226,8 @@ export default function ShareScreen() {
       const sanitizedName = (routeData.originFileName || routeData.name || 'route').replace(/[^a-z0-9]/gi, '_').toLowerCase();
 
       let imgURL = null;
-      if (routeData.imgUri && routeData.imgUri.includes(';') && routeData.imgUri.includes(',')) {
-        const parts = routeData.imgUri.split(';');
-        const subparts = parts[1].split(',');
-        if (parts.length === 2 && subparts.length === 2) {
-          const base64Data = subparts[1];
-          imgURL = await uploadImgFile(base64Data);
-        }
+      if (routeData.imgBase64) {
+        imgURL = await uploadImgFile(routeData.imgBase64);
       }
 
       const jsonFileName = `${sanitizedName}_${timestamp}.geojson`;
