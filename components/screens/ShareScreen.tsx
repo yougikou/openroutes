@@ -367,7 +367,7 @@ export default function ShareScreen() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>2. {i18n.t('share_course_desc') || 'Details'}</Text>
                 <Button mode="text" compact onPress={() => setDashEditModalVisible(true)} disabled={!routeData.geojsonData}>
-                  Edit
+                  {i18n.t('edit')}
                 </Button>
               </View>
             </View>
@@ -386,10 +386,10 @@ export default function ShareScreen() {
               <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>3. {i18n.t('share_course_name') || 'Classification'}</Text>
             </View>
             <View style={{ padding: 16 }}>
-              <Text variant="labelMedium" style={{ marginBottom: 8, color: theme.colors.secondary }}>Type</Text>
+              <Text variant="labelMedium" style={{ marginBottom: 8, color: theme.colors.secondary }}>{i18n.t('label_type')}</Text>
               <RouteTypeButtons routeData={routeData} updateRouteData={updateRouteData} />
 
-              <Text variant="labelMedium" style={{ marginBottom: 8, marginTop: 16, color: theme.colors.secondary }}>Difficulty</Text>
+              <Text variant="labelMedium" style={{ marginBottom: 8, marginTop: 16, color: theme.colors.secondary }}>{i18n.t('label_difficulty')}</Text>
               <RouteDifficultButtons routeData={routeData} updateRouteData={updateRouteData} />
             </View>
           </Surface>
@@ -520,32 +520,52 @@ const ProgressCircle = ({ isProcessing }) => {
 
 
 const RouteTypeButtons = ({ routeData, updateRouteData }) => {
+  const types = [
+    { value: 'hiking', label: i18n.t('hiking'), icon: 'hiking' },
+    { value: 'walking', label: i18n.t('walking'), icon: 'walk' },
+    { value: 'cycling', label: i18n.t('cycling'), icon: 'bicycle' },
+  ];
+
   return (
-    <SegmentedButtons
-      value={routeData.type}
-      onValueChange={(value) => updateRouteData('type', value)}
-      buttons={[
-        { value: 'hiking', label: i18n.t('hiking') },
-        { value: 'walking', label: i18n.t('walking') },
-        { value: 'cycling', label: i18n.t('cycling') },
-      ]}
-    />
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+      {types.map((type) => (
+        <Chip
+          key={type.value}
+          mode={routeData.type === type.value ? 'flat' : 'outlined'}
+          selected={routeData.type === type.value}
+          showSelectedOverlay
+          icon={type.icon}
+          onPress={() => updateRouteData('type', type.value)}
+        >
+          {type.label}
+        </Chip>
+      ))}
+    </View>
   );
 };
 
 const RouteDifficultButtons = ({ routeData, updateRouteData }) => {
-  // Only show icons or shorter labels on small screens if needed, but standard text is usually fine
+  const difficulties = [
+    { value: 'easy', label: i18n.t('easy') },
+    { value: 'normal', label: i18n.t('normal') },
+    { value: 'moderate', label: i18n.t('moderate') },
+    { value: 'hard', label: i18n.t('hard') },
+  ];
+
   return (
-    <SegmentedButtons
-      value={routeData.difficulty}
-      onValueChange={(value) => updateRouteData('difficulty', value)}
-      buttons={[
-        { value: 'easy', label: i18n.t('easy') },
-        { value: 'normal', label: i18n.t('normal') },
-        { value: 'moderate', label: i18n.t('moderate') },
-        { value: 'hard', label: i18n.t('hard') },
-      ]}
-    />
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+      {difficulties.map((diff) => (
+        <Chip
+          key={diff.value}
+          mode={routeData.difficulty === diff.value ? 'flat' : 'outlined'}
+          selected={routeData.difficulty === diff.value}
+          showSelectedOverlay
+          onPress={() => updateRouteData('difficulty', diff.value)}
+        >
+          {diff.label}
+        </Chip>
+      ))}
+    </View>
   );
 };
 
@@ -721,9 +741,10 @@ const RouteDashboard = ({ date, distance, duration, theme }) => {
 
   let dateDisplay = "---";
   if (date) {
-    const month = String(date.getMonth() + 1);
-    const day = String(date.getDate());
-    dateDisplay = `${month}/${day}`;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    dateDisplay = `${year}/${month}/${day}`;
   }
 
   return (

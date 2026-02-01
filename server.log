@@ -1,0 +1,9 @@
+127.0.0.1 - - [01/Feb/2026 11:26:02] "GET /openroutes/share.html HTTP/1.1" 200 -
+127.0.0.1 - - [01/Feb/2026 11:26:02] "GET /openroutes/_expo/static/js/web/entry-56f7c2abb0b096272e80b2bce6a9d10a.js HTTP/1.1" 200 -
+127.0.0.1 - - [01/Feb/2026 11:26:03] "GET /openroutes/assets/node_modules/expo-router/assets/unmatched.20e71bdf79e3a97bf55fd9e164041578.png HTTP/1.1" 200 -
+127.0.0.1 - - [01/Feb/2026 11:26:53] "GET /openroutes/share/ HTTP/1.1" 200 -
+127.0.0.1 - - [01/Feb/2026 11:26:53] "GET /openroutes/_expo/static/js/web/entry-56f7c2abb0b096272e80b2bce6a9d10a.js HTTP/1.1" 200 -
+127.0.0.1 - - [01/Feb/2026 11:26:54] "GET /openroutes/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.6e435534bd35da5fef04168860a9b8fa.ttf HTTP/1.1" 200 -
+127.0.0.1 - - [01/Feb/2026 11:27:37] "GET /openroutes/share/ HTTP/1.1" 200 -
+127.0.0.1 - - [01/Feb/2026 11:27:37] "GET /openroutes/_expo/static/js/web/entry-56f7c2abb0b096272e80b2bce6a9d10a.js HTTP/1.1" 200 -
+127.0.0.1 - - [01/Feb/2026 11:27:38] "GET /openroutes/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.6e435534bd35da5fef04168860a9b8fa.ttf HTTP/1.1" 200 -
