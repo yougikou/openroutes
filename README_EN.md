@@ -17,7 +17,7 @@ It aims to be a completely free ecosystem, using **GitHub Issues** as a database
 -   **Authentication:** GitHub OAuth
 -   **Storage (Current):**
     -   Images: Imgur API
-    -   GeoJSON (Route Data): File.io (Note: Temporary storage, persistence is a known issue)
+    -   GeoJSON (Route Data): GitHub Releases (Inbox) -> GitHub Repo (Assets Branch)
 
 ## Features
 1.  **Explore Routes (Explore)**
@@ -42,6 +42,28 @@ It aims to be a completely free ecosystem, using **GitHub Issues** as a database
 ```bash
 npm install
 ```
+
+### Configuration
+
+#### Local Development (`.env`)
+Create a `.env` file in the project root with the following variables:
+
+```ini
+# The GitHub username of the data source repository owner
+EXPO_PUBLIC_GITHUB_OWNER=your_github_username
+# The name of the data source repository
+EXPO_PUBLIC_GITHUB_REPO=your_repo_name
+```
+
+#### GitHub Actions Secrets
+If using CI/CD (GitHub Actions), you must set the following secrets in Settings > Secrets and variables > Actions:
+
+- **Required**
+    - `EXPO_PUBLIC_GITHUB_OWNER`: GitHub username for the data source.
+    - `EXPO_PUBLIC_GITHUB_REPO`: Repository name for the data source.
+
+- **Optional (If data source repo differs from app repo)**
+    - `ACCESS_TOKEN`: A Personal Access Token (PAT) with write permissions to the data source repository (for syncing workflows).
 
 ### Running
 ```bash
