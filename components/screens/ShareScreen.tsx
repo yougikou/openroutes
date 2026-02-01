@@ -339,7 +339,7 @@ export default function ShareScreen() {
                   ) : (
                     <View style={{ alignItems: 'center' }}>
                       <IconButton icon="file-upload-outline" size={40} iconColor={theme.colors.outline} />
-                      <Text variant="bodyMedium" style={{ color: theme.colors.outline }}>{i18n.t('share_upload_file')}</Text>
+                      <Text variant="bodyMedium" style={{ color: theme.colors.outline, textAlign: 'center' }}>{i18n.t('share_upload_file')}</Text>
                     </View>
                   )}
                 </View>

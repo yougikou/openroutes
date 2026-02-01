@@ -1,9 +1,21 @@
-127.0.0.1 - - [01/Feb/2026 11:26:02] "GET /openroutes/share.html HTTP/1.1" 200 -
-127.0.0.1 - - [01/Feb/2026 11:26:02] "GET /openroutes/_expo/static/js/web/entry-56f7c2abb0b096272e80b2bce6a9d10a.js HTTP/1.1" 200 -
-127.0.0.1 - - [01/Feb/2026 11:26:03] "GET /openroutes/assets/node_modules/expo-router/assets/unmatched.20e71bdf79e3a97bf55fd9e164041578.png HTTP/1.1" 200 -
-127.0.0.1 - - [01/Feb/2026 11:26:53] "GET /openroutes/share/ HTTP/1.1" 200 -
-127.0.0.1 - - [01/Feb/2026 11:26:53] "GET /openroutes/_expo/static/js/web/entry-56f7c2abb0b096272e80b2bce6a9d10a.js HTTP/1.1" 200 -
-127.0.0.1 - - [01/Feb/2026 11:26:54] "GET /openroutes/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.6e435534bd35da5fef04168860a9b8fa.ttf HTTP/1.1" 200 -
-127.0.0.1 - - [01/Feb/2026 11:27:37] "GET /openroutes/share/ HTTP/1.1" 200 -
-127.0.0.1 - - [01/Feb/2026 11:27:37] "GET /openroutes/_expo/static/js/web/entry-56f7c2abb0b096272e80b2bce6a9d10a.js HTTP/1.1" 200 -
-127.0.0.1 - - [01/Feb/2026 11:27:38] "GET /openroutes/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.6e435534bd35da5fef04168860a9b8fa.ttf HTTP/1.1" 200 -
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/jules/.pyenv/versions/3.12.12/lib/python3.12/http/server.py", line 1314, in <module>
+    test(
+  File "/home/jules/.pyenv/versions/3.12.12/lib/python3.12/http/server.py", line 1261, in test
+    with ServerClass(addr, HandlerClass) as httpd:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.12/lib/python3.12/socketserver.py", line 457, in __init__
+    self.server_bind()
+  File "/home/jules/.pyenv/versions/3.12.12/lib/python3.12/http/server.py", line 1308, in server_bind
+    return super().server_bind()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.12/lib/python3.12/http/server.py", line 136, in server_bind
+    socketserver.TCPServer.server_bind(self)
+  File "/home/jules/.pyenv/versions/3.12.12/lib/python3.12/socketserver.py", line 478, in server_bind
+    self.socket.bind(self.server_address)
+OSError: [Errno 98] Address already in use
+127.0.0.1 - - [01/Feb/2026 11:35:10] "GET /openroutes/share/ HTTP/1.1" 200 -
+127.0.0.1 - - [01/Feb/2026 11:35:10] "GET /openroutes/_expo/static/js/web/entry-5f9fc71ac425ec84ab978747b5f8bbc5.js HTTP/1.1" 200 -
+127.0.0.1 - - [01/Feb/2026 11:35:11] "GET /openroutes/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.6e435534bd35da5fef04168860a9b8fa.ttf HTTP/1.1" 200 -
