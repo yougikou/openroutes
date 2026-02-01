@@ -445,6 +445,13 @@ const uploadImgToImgur = async (base64Data: string): Promise<string> => {
       },
       body: formData,
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Imgur Upload Failed:', response.status, errorText);
+      throw new Error(`Imgur Upload Failed: ${response.status}`);
+    }
+
     const resJson = (await response.json()) as { data: { link: string } };
     return resJson.data.link;
   } catch (error) {
