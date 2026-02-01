@@ -126,7 +126,7 @@ export const translations: Record<Locale, TranslationDictionary> = {
     home_unit_km: 'km',
     home_unit_hour: '時間',
     home_unit_min: '分',
-    share_upload_file: 'GPX/KML\nアップロード',
+    share_upload_file: 'GPX/KMLアップロード',
     share_file_info_warn: '新規軌跡情報送信するにはGithubトークンが必要。\n設定画面でGithubアカウント認証を行ってください。',
     edit: '編集',
     label_type: 'タイプ',
