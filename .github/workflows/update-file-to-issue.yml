@@ -47,6 +47,7 @@ jobs:
 
             console.log(`Downloaded ${fileName}`);
             core.setOutput('filename', fileName);
+            core.setOutput('download_url', url);
 
       - name: Push to assets branch
         env:
@@ -105,3 +106,66 @@ jobs:
               issue_number: context.issue.number,
               body: newBody,
             });
+
+      - name: Delete from Inbox
+        uses: actions/github-script@v7
+        if: steps.parse.outputs.download_url != ''
+        env:
+          DOWNLOAD_URL: ${{ steps.parse.outputs.download_url }}
+        with:
+          script: |
+            const url = process.env.DOWNLOAD_URL;
+            console.log(`Processing deletion for URL: ${url}`);
+
+            if (!url.includes('/releases/download/inbox/')) {
+               console.log("URL does not look like an inbox release asset. Skipping deletion.");
+               return;
+            }
+
+            // Extract filename from URL
+            const urlParts = url.split('/');
+            // The last part is the filename, potentially encoded.
+            // GitHub release asset names in API are usually not encoded, but URL is.
+            // e.g. URL: .../foo%20bar.geojson -> asset name: foo bar.geojson
+            const encodedName = urlParts[urlParts.length - 1];
+            const assetName = decodeURIComponent(encodedName);
+
+            console.log(`Looking for asset '${assetName}' in release 'inbox'`);
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Get release by tag
+            let release;
+            try {
+              const response = await github.rest.repos.getReleaseByTag({
+                owner,
+                repo,
+                tag: 'inbox'
+              });
+              release = response.data;
+            } catch (e) {
+               console.log("Could not find release 'inbox'. Error:", e.message);
+               return;
+            }
+
+            // Find asset
+            const asset = release.assets.find(a => a.name === assetName);
+
+            if (!asset) {
+               console.log(`Asset '${assetName}' not found in release 'inbox'. Available assets: ${release.assets.map(a => a.name).join(', ')}`);
+               return;
+            }
+
+            // Delete asset
+            try {
+              await github.rest.repos.deleteReleaseAsset({
+                owner,
+                repo,
+                asset_id: asset.id
+              });
+              console.log(`Successfully deleted asset '${assetName}' (id: ${asset.id})`);
+            } catch (e) {
+              console.log(`Failed to delete asset. Error: ${e.message}`);
+              throw e;
+            }
