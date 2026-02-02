@@ -1,68 +1,19 @@
 import React from 'react';
-import { Platform } from 'react-native';
-import { Tabs } from 'expo-router/tabs';
+import { Stack } from 'expo-router';
 import { PaperProvider } from 'react-native-paper';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import i18n from '../components/i18n/i18n';
 import { theme } from '../components/theme';
-import { LanguageProvider, useLanguage } from '../components/i18n/LanguageContext';
-
-function AppTabs(): React.ReactElement {
-  const { locale } = useLanguage();
-
-  return (
-    <Tabs
-      key={locale}
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          height: Platform.OS === 'ios' ? 95 : 70,
-          paddingBottom: Platform.OS === 'ios' ? 30 : 10,
-          paddingTop: 10,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          tabBarLabel: i18n.t('bottom_explore'),
-          href: '/',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="map-search" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="share"
-        options={{
-          tabBarLabel: i18n.t('bottom_share'),
-          href: '/share',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="cloud-upload" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="setting"
-        options={{
-          tabBarLabel: i18n.t('bottom_setting'),
-          href: '/setting',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="cog" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen name="githubauth" options={{ href: null }} />
-      <Tabs.Screen name="detail" options={{ href: null }} />
-    </Tabs>
-  );
-}
+import { LanguageProvider } from '../components/i18n/LanguageContext';
 
 export default function RootLayout(): React.ReactElement {
   return (
     <LanguageProvider>
       <PaperProvider theme={theme}>
-        <AppTabs />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="map" />
+          <Stack.Screen name="detail" />
+          <Stack.Screen name="githubauth" />
+        </Stack>
       </PaperProvider>
     </LanguageProvider>
   );
