@@ -47,9 +47,10 @@ const FitBounds = ({ data }: { data: any }) => {
 interface MapScreenProps {
   url?: string;
   title?: string;
+  source?: string;
 }
 
-const MapScreen: React.FC<MapScreenProps> = ({ url, title }) => {
+const MapScreen: React.FC<MapScreenProps> = ({ url, title, source }) => {
   const theme = useTheme();
   const router = useRouter();
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
@@ -136,8 +137,11 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title }) => {
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
+    } else if (Platform.OS === 'web' && source === 'home' && typeof window !== 'undefined') {
+      // Force browser back to preserve scroll position on Home
+      window.history.back();
     } else {
-      router.replace('/');
+      router.replace('/(tabs)/');
     }
   };
 
@@ -283,19 +287,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 16,
     left: 16,
-    zIndex: 1000,
+    zIndex: 10000,
   },
   locateFab: {
     position: 'absolute',
     bottom: 80,
     right: 16,
-    zIndex: 1000,
+    zIndex: 10000,
   },
   openFab: {
     position: 'absolute',
     bottom: 32,
     right: 16,
-    zIndex: 1000,
+    zIndex: 10000,
   },
   titleContainer: {
     position: 'absolute',
