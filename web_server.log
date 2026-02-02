@@ -1,0 +1,68 @@
+
+> openroutes@1.0.0 web
+> expo start --web
+
+env: load .env
+env: export EXPO_PUBLIC_GITHUB_OWNER EXPO_PUBLIC_GITHUB_REPO GITHUB_REPOSITORY
+[33m[1mWarning: [22mRoot-level [1m"expo"[22m object found. Ignoring extra keys in Expo config: "scheme", "platforms"
+[90mLearn more: https://expo.fyi/root-expo-object[0m[0m
+Starting project at /app
+Starting Metro Bundler
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web node_modules/expo-router/entry.js ▓▓▓▓░░░░░░░░░░░░ 25.0% ( 62/158)
+λ node_modules/expo-router/node/render.js ▓▓▓▓░░░░░░░░░░░░ 25.8% ( 99/195)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 46.6% (183/268)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓░░░░░░░░░░ 42.1% (307/473)
+| [33m[1mWarning: [22mRoot-level [1m"expo"[22m object found. Ignoring extra keys in Expo config: "scheme", "platforms"
+| [90mLearn more: https://expo.fyi/root-expo-object[0m[0m
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 49.2% (323/475)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 67.6% (500/608)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 60.3% (455/613)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 69.9% (639/830)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 63.9% (561/748)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 69.9% ( 806/1102)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 63.9% (650/883)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 69.9% ( 936/1241)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 66.8% ( 855/1122)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 75.1% (1151/1343)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 66.8% ( 933/1232)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 86.1% (1333/1440)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 77.2% (1217/1385)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 87.5% (1439/1538)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 82.2% (1446/1595)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 90.9% (1584/1672)
+λ Bundled 37956ms node_modules/expo-router/node/render.js (1785 modules)
+"shadow*" style props are deprecated. Use "boxShadow".
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.8% (1957/1959)
+
+Metro error: window is not defined
+
+  ReferenceError: window is not defined
+    at factory (/app/node_modules/leaflet/dist/leaflet-src.js:230:19)
+    at /app/node_modules/leaflet/dist/leaflet-src.js:7:66
+    at factory (/app/node_modules/leaflet/dist/leaflet-src.js:10:2)
+    at loadModuleImplementation (/app/node_modules/@expo/cli/build/metro-require/require.js:248:36)
+    at guardedLoadModule (/app/node_modules/@expo/cli/build/metro-require/require.js:163:16)
+    at require (/app/node_modules/@expo/cli/build/metro-require/require.js:74:75)
+    at factory (/app/node_modules/@react-leaflet/core/lib/dom.js:1:1)
+    at loadModuleImplementation (/app/node_modules/@expo/cli/build/metro-require/require.js:248:36)
+    at guardedLoadModule (/app/node_modules/@expo/cli/build/metro-require/require.js:163:16)
+    at metroRequire (/app/node_modules/@expo/cli/build/metro-require/require.js:74:75)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1958/1959)
+Web Bundled 44797ms node_modules/expo-router/entry.js (1959 modules)
+Web node_modules/expo-router/_error.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 80.1% (196/219)
+Web node_modules/expo-router/_error.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 90.1% (251/273)
+Web Bundled 7926ms node_modules/expo-router/_error.js (323 modules)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 166ms node_modules/expo-router/node/render.js (1 module)
+"shadow*" style props are deprecated. Use "boxShadow".
+Web Bundled 1285ms node_modules/expo-router/entry.js (1 module)
+Web node_modules/expo-router/entry.js ▓▓▓▓░░░░░░░░░░░░ 28.3% (211/411)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓░░░░░░░░░░ 42.6% (504/778)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 57.6% ( 930/1288)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 81.4% (1349/1504)
+Web Bundled 16071ms node_modules/expo-router/entry.js (1960 modules)
+ LOG  [web] Logs will appear in the browser console
