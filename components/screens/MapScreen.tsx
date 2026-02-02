@@ -70,8 +70,16 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source }) => {
         link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
         document.head.appendChild(link);
       }
-      // Do not remove the stylesheet on unmount to prevent white screen/layout collapse during navigation
     }
+
+    return () => {
+      if (Platform.OS === 'web') {
+        const link = document.getElementById('leaflet-css');
+        if (link) {
+          link.remove();
+        }
+      }
+    };
   }, []);
 
   // Fetch GeoJSON
