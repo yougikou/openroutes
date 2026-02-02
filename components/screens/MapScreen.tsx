@@ -137,7 +137,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title }) => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/');
+      router.replace('/(tabs)/');
     }
   };
 
@@ -283,19 +283,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 16,
     left: 16,
-    zIndex: 1000,
+    zIndex: 10000,
   },
   locateFab: {
     position: 'absolute',
     bottom: 80,
     right: 16,
-    zIndex: 1000,
+    zIndex: 10000,
   },
   openFab: {
     position: 'absolute',
     bottom: 32,
     right: 16,
-    zIndex: 1000,
+    zIndex: 10000,
   },
   titleContainer: {
     position: 'absolute',
