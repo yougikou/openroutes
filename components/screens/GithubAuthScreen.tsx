@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useRoute } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { Text, Button } from 'react-native-paper';
 import i18n from '../i18n/i18n';
 import { exchangeToken } from '../apis/GitHubAPI';
@@ -13,6 +14,7 @@ type RouteParams = {
 };
 
 const GithubAuthScreen = (): React.ReactElement => {
+  const router = useRouter();
   const route = useRoute();
   const [tokenStatus, setTokenStatus] = useState<TokenStatus>('checking');
 
@@ -23,9 +25,7 @@ const GithubAuthScreen = (): React.ReactElement => {
         const code = params.code ?? null;
         if (code) {
           await exchangeToken(code);
-          if (typeof window !== 'undefined') {
-            window.location.replace(window.location.origin + window.location.pathname);
-          }
+          router.replace('/(tabs)/setting');
         } else {
           const token = await readData('github_access_token');
           if (token) {
@@ -36,9 +36,7 @@ const GithubAuthScreen = (): React.ReactElement => {
         }
       } catch (error) {
         console.error('Error exchange Token:', error);
-        if (typeof window !== 'undefined') {
-          window.location.replace(window.location.origin + window.location.pathname);
-        }
+        router.replace('/(tabs)/setting');
       }
     };
 

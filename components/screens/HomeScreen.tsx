@@ -137,9 +137,12 @@ const HomeScreen = (): React.ReactElement => {
     loadIssues();
   }, [loadIssues]);
 
-  const handleToDetail = useCallback(() => {
-    // TODO: implement route detail navigation when available
-  }, []);
+  const handleToDetail = useCallback((item: RouteIssue) => {
+    router.push({
+      pathname: '/detail',
+      params: { item: JSON.stringify(item) }
+    });
+  }, [router]);
 
   const renderItem: ListRenderItem<RouteIssue> = useCallback(
     ({ item, index }) => {
@@ -156,7 +159,7 @@ const HomeScreen = (): React.ReactElement => {
 
       return (
         <Animated.View entering={FadeInDown.delay(index * 50).springify()} style={{ flex: 1, padding: 8 }}>
-          <Pressable onPress={handleToDetail} style={{ flex: 1 }}>
+          <Pressable onPress={() => handleToDetail(item)} style={{ flex: 1 }}>
             <Surface style={[styles.cardSurface, { backgroundColor: theme.colors.surface }]} elevation={1}>
               {/* Image Section */}
               <View style={styles.imageContainer}>
@@ -255,7 +258,7 @@ const HomeScreen = (): React.ReactElement => {
                       }
                     }}
                   />
-                  <IconButton icon="arrow-right" size={20} iconColor={theme.colors.primary} style={{ marginLeft: 'auto', margin: 0 }} onPress={handleToDetail} />
+                  <IconButton icon="arrow-right" size={20} iconColor={theme.colors.primary} style={{ marginLeft: 'auto', margin: 0 }} onPress={() => handleToDetail(item)} />
                 </View>
               </View>
             </Surface>
