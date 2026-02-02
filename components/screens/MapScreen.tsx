@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Platform, Linking } from 'react-native';
+import { View, StyleSheet, Platform, Linking, Alert } from 'react-native';
 import { ActivityIndicator, FAB, Text, useTheme, Button } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
@@ -9,14 +9,21 @@ import { convertBlobUrlToRawUrl } from '../../utils/url';
 let MapContainer: any, TileLayer: any, GeoJSON: any, CircleMarker: any, Popup: any, useMap: any, L: any;
 
 if (Platform.OS === 'web') {
-  const ReactLeaflet = require('react-leaflet');
-  MapContainer = ReactLeaflet.MapContainer;
-  TileLayer = ReactLeaflet.TileLayer;
-  GeoJSON = ReactLeaflet.GeoJSON;
-  CircleMarker = ReactLeaflet.CircleMarker;
-  Popup = ReactLeaflet.Popup;
-  useMap = ReactLeaflet.useMap;
-  L = require('leaflet');
+  // Ensure we are in a browser environment before requiring Leaflet
+  if (typeof window !== 'undefined') {
+    try {
+      const ReactLeaflet = require('react-leaflet');
+      MapContainer = ReactLeaflet.MapContainer;
+      TileLayer = ReactLeaflet.TileLayer;
+      GeoJSON = ReactLeaflet.GeoJSON;
+      CircleMarker = ReactLeaflet.CircleMarker;
+      Popup = ReactLeaflet.Popup;
+      useMap = ReactLeaflet.useMap;
+      L = require('leaflet');
+    } catch (e) {
+      console.warn("Failed to load Leaflet modules", e);
+    }
+  }
 }
 
 const FitBounds = ({ data }: { data: any }) => {
@@ -49,17 +56,20 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title }) => {
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mapInstance, setMapInstance] = useState<any>(null);
 
   // Inject Leaflet CSS
   useEffect(() => {
     if (Platform.OS === 'web') {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(link);
-      return () => {
-        document.head.removeChild(link);
-      };
+      // Check if link already exists to avoid duplicates
+      if (!document.querySelector('#leaflet-css')) {
+        const link = document.createElement('link');
+        link.id = 'leaflet-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+      }
+      // Do not remove the stylesheet on unmount to prevent white screen/layout collapse during navigation
     }
   }, []);
 
@@ -87,7 +97,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title }) => {
     fetchData();
   }, [url]);
 
-  // Track User Location
+  // Track User Location (Background/Auto)
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
     const startTracking = async () => {
@@ -123,11 +133,56 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title }) => {
     }
   };
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/');
+    }
+  };
+
+  const handleLocateMe = async () => {
+    if (Platform.OS !== 'web') return;
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        if (Platform.OS === 'web') {
+            window.alert('Permission to access location was denied');
+        } else {
+            Alert.alert('Permission denied', 'Allow location access to see your position.');
+        }
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setUserLocation(location);
+
+      if (mapInstance) {
+        mapInstance.flyTo([location.coords.latitude, location.coords.longitude], 15);
+      }
+    } catch (err) {
+      console.warn(err);
+      if (Platform.OS === 'web') {
+          window.alert('Failed to get current location');
+      }
+    }
+  };
+
   if (Platform.OS !== 'web') {
     return (
       <View style={styles.center}>
         <Text>Map view is currently supported on Web only.</Text>
-        <Button mode="contained" onPress={() => router.back()} style={{marginTop: 20}}>Go Back</Button>
+        <Button mode="contained" onPress={handleBack} style={{marginTop: 20}}>Go Back</Button>
+      </View>
+    );
+  }
+
+  // Guard against server-side rendering where Leaflet is not loaded
+  if (Platform.OS === 'web' && (!MapContainer || !TileLayer)) {
+    return (
+      <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
+        <ActivityIndicator size="large" />
       </View>
     );
   }
@@ -144,7 +199,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title }) => {
     return (
       <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
         <Text style={{ color: theme.colors.error }}>{error}</Text>
-        <FAB icon="arrow-left" style={styles.backFab} onPress={() => router.back()} label="Back" />
+        <FAB icon="arrow-left" style={styles.backFab} onPress={handleBack} label="Back" />
       </View>
     );
   }
@@ -157,6 +212,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title }) => {
             zoom={2}
             style={{ width: '100%', height: '100%' }}
             zoomControl={false}
+            ref={setMapInstance}
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -182,7 +238,14 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title }) => {
        <FAB
          icon="arrow-left"
          style={[styles.backFab, { backgroundColor: theme.colors.surface }]}
-         onPress={() => router.back()}
+         onPress={handleBack}
+         size="small"
+       />
+
+       <FAB
+         icon="crosshairs-gps"
+         style={[styles.locateFab, { backgroundColor: theme.colors.surface }]}
+         onPress={handleLocateMe}
          size="small"
        />
 
@@ -220,6 +283,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 16,
     left: 16,
+    zIndex: 1000,
+  },
+  locateFab: {
+    position: 'absolute',
+    bottom: 80,
+    right: 16,
     zIndex: 1000,
   },
   openFab: {
