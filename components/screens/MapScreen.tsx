@@ -130,7 +130,13 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source }) => {
     }
 
     return () => {
-      if (subscription) subscription.remove();
+      if (subscription) {
+        try {
+          subscription.remove();
+        } catch (e) {
+          console.warn('Failed to remove location subscription', e);
+        }
+      }
     };
   }, []);
 
