@@ -250,7 +250,7 @@ const HomeScreen = (): React.ReactElement => {
                       if (geoJsonUri) {
                         router.push({
                           pathname: '/map',
-                          params: { url: geoJsonUri, title: item.title }
+                          params: { url: geoJsonUri, title: item.title, source: 'home' }
                         });
                       }
                     }}

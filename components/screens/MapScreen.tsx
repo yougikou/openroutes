@@ -47,9 +47,10 @@ const FitBounds = ({ data }: { data: any }) => {
 interface MapScreenProps {
   url?: string;
   title?: string;
+  source?: string;
 }
 
-const MapScreen: React.FC<MapScreenProps> = ({ url, title }) => {
+const MapScreen: React.FC<MapScreenProps> = ({ url, title, source }) => {
   const theme = useTheme();
   const router = useRouter();
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
@@ -136,6 +137,9 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title }) => {
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
+    } else if (Platform.OS === 'web' && source === 'home' && typeof window !== 'undefined') {
+      // Force browser back to preserve scroll position on Home
+      window.history.back();
     } else {
       router.replace('/(tabs)/');
     }
