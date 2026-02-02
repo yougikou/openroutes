@@ -128,22 +128,22 @@ const SettingScreen = (): React.ReactElement => {
             {isExchanging ? (
                <View style={styles.loadingState}>
                   <ActivityIndicator size="large" color={theme.colors.primary} />
-                  <Text style={{ marginTop: 16 }}>Connecting to GitHub...</Text>
+                  <Text style={{ marginTop: 16 }}>{i18n.t('setting_connecting')}</Text>
                </View>
             ) : githubToken ? (
               <View style={styles.connectedState}>
                 <Avatar.Icon size={48} icon="check-bold" style={{ backgroundColor: theme.colors.primaryContainer }} color={theme.colors.onPrimaryContainer} />
-                <TitleSection title="GitHub Connected" subtitle="Your account is linked and ready to sync routes." />
+                <TitleSection title={i18n.t('setting_connected_title')} subtitle={i18n.t('setting_connected_desc')} />
                 <Button mode="outlined" textColor={theme.colors.error} onPress={handleDisconnect}>
-                  Disconnect
+                  {i18n.t('setting_disconnect')}
                 </Button>
               </View>
             ) : (
               <List.Item
                 title={i18n.t('setting_github_oauth')}
-                description="Connect to GitHub to backup and share your routes."
+                description={i18n.t('setting_connect_desc')}
                 left={(props) => <List.Icon {...props} icon="github" color={theme.colors.onSurface} />}
-                right={(props) => <Button mode="contained" compact style={{ alignSelf: 'center', marginLeft: 8 }} onPress={handleConnect}>Connect</Button>}
+                right={(props) => <Button mode="contained" compact style={{ alignSelf: 'center', marginLeft: 8 }} onPress={handleConnect}>{i18n.t('setting_connect_btn')}</Button>}
                 style={{ paddingVertical: 12 }}
                 titleStyle={{ fontWeight: 'bold' }}
               />
@@ -153,12 +153,12 @@ const SettingScreen = (): React.ReactElement => {
           {/* Language Settings Section */}
           <View style={[styles.sectionTitleContainer, { marginTop: 24 }]}>
             <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>
-              Language / 言語 / 语言
+              {i18n.t('setting_language')}
             </Text>
           </View>
           <Surface style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={1}>
             <List.Accordion
-              title={SUPPORTED_LANGUAGES.find((l) => l.code === locale)?.label || 'Select Language'}
+              title={SUPPORTED_LANGUAGES.find((l) => l.code === locale)?.label || i18n.t('setting_select_language')}
               left={(props) => <List.Icon {...props} icon="translate" />}
             >
               {SUPPORTED_LANGUAGES.map((lang) => (
@@ -175,19 +175,19 @@ const SettingScreen = (): React.ReactElement => {
           {/* App Info Section (Example) */}
           <View style={[styles.sectionTitleContainer, { marginTop: 24 }]}>
             <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>
-              About
+              {i18n.t('setting_about')}
             </Text>
           </View>
           <Surface style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={1}>
             <List.Item
-              title="Version"
+              title={i18n.t('setting_version')}
               description="1.0.0 (Beta)"
               left={(props) => <List.Icon {...props} icon="information-outline" />}
             />
             <Divider />
             <List.Item
-              title="Open Source"
-              description="Visit our repository"
+              title={i18n.t('setting_opensource')}
+              description={i18n.t('setting_visit_repo')}
               left={(props) => <List.Icon {...props} icon="code-tags" />}
               onPress={() => Linking.openURL('https://github.com/yougikou/openroutes')}
             />
