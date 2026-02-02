@@ -163,14 +163,15 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title }) => {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
-            {geoJsonData && <GeoJSON data={geoJsonData} style={{ color: theme.colors.primary, weight: 4 }} />}
+            {geoJsonData && <GeoJSON key={url} data={geoJsonData} style={{ color: theme.colors.primary, weight: 4 }} />}
             {geoJsonData && <FitBounds data={geoJsonData} />}
 
             {userLocation && (
               <CircleMarker
+                key={`${userLocation.timestamp}`}
                 center={[userLocation.coords.latitude, userLocation.coords.longitude]}
                 radius={8}
-                pathOptions={{ color: 'white', fillColor: theme.colors.primary, fillOpacity: 1 }}
+                pathOptions={{ color: 'white', fillColor: '#4285F4', fillOpacity: 1 }}
               >
                   <Popup>You are here</Popup>
               </CircleMarker>
