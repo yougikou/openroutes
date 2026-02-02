@@ -135,11 +135,14 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source }) => {
   };
 
   const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-    } else if (Platform.OS === 'web' && source === 'home' && typeof window !== 'undefined') {
+    if (Platform.OS === 'web' && source === 'home' && typeof window !== 'undefined') {
       // Force browser back to preserve scroll position on Home
       window.history.back();
+      return;
+    }
+
+    if (router.canGoBack()) {
+      router.back();
     } else {
       router.replace('/(tabs)/');
     }
