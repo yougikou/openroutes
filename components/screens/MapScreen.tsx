@@ -6,7 +6,7 @@ import * as Location from 'expo-location';
 import { convertBlobUrlToRawUrl } from '../../utils/url';
 
 // Only import Leaflet modules on Web to avoid Metro bundler issues on Native
-let MapContainer: any, TileLayer: any, GeoJSON: any, CircleMarker: any, Popup: any, useMap: any, L: any;
+let MapContainer: any, TileLayer: any, GeoJSON: any, CircleMarker: any, Circle: any, Popup: any, useMap: any, L: any;
 
 if (Platform.OS === 'web') {
   // Ensure we are in a browser environment before requiring Leaflet
@@ -17,6 +17,7 @@ if (Platform.OS === 'web') {
       TileLayer = ReactLeaflet.TileLayer;
       GeoJSON = ReactLeaflet.GeoJSON;
       CircleMarker = ReactLeaflet.CircleMarker;
+      Circle = ReactLeaflet.Circle;
       Popup = ReactLeaflet.Popup;
       useMap = ReactLeaflet.useMap;
       L = require('leaflet');
@@ -25,6 +26,88 @@ if (Platform.OS === 'web') {
     }
   }
 }
+
+const UserLocationMarker = ({ userLocation }: { userLocation: Location.LocationObject }) => {
+  const markerRef = React.useRef<any>(null);
+  const accuracyCircleRef = React.useRef<any>(null);
+  const requestRef = React.useRef<number>();
+
+  useEffect(() => {
+    if (!userLocation) return;
+
+    const duration = 1000; // ms
+    const startTime = performance.now();
+
+    // Get start position from map instance if available, else use userLocation
+    // We try to use the current visual position to ensure smooth transition
+    const startLatLng = markerRef.current ? markerRef.current.getLatLng() : { lat: userLocation.coords.latitude, lng: userLocation.coords.longitude };
+    const startLat = startLatLng.lat;
+    const startLng = startLatLng.lng;
+
+    const endLat = userLocation.coords.latitude;
+    const endLng = userLocation.coords.longitude;
+    const endAccuracy = userLocation.coords.accuracy || 0;
+
+    // Check distance to avoid animating across the world on first load or huge jumps
+    const dist = Math.sqrt(Math.pow(endLat - startLat, 2) + Math.pow(endLng - startLng, 2));
+    if (dist > 0.05) { // If jumped > ~5km (roughly), don't animate, just set.
+      if (markerRef.current) markerRef.current.setLatLng([endLat, endLng]);
+      if (accuracyCircleRef.current) {
+        accuracyCircleRef.current.setLatLng([endLat, endLng]);
+        accuracyCircleRef.current.setRadius(endAccuracy);
+      }
+      return;
+    }
+
+    const animate = (time: number) => {
+      const elapsed = time - startTime;
+      const t = Math.min(elapsed / duration, 1); // 0 to 1
+
+      // Linear interpolation
+      const currentLat = startLat + (endLat - startLat) * t;
+      const currentLng = startLng + (endLng - startLng) * t;
+
+      if (markerRef.current) {
+        markerRef.current.setLatLng([currentLat, currentLng]);
+      }
+      if (accuracyCircleRef.current) {
+        accuracyCircleRef.current.setLatLng([currentLat, currentLng]);
+        accuracyCircleRef.current.setRadius(endAccuracy);
+      }
+
+      if (t < 1) {
+        requestRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    requestRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    };
+  }, [userLocation]);
+
+  if (!userLocation) return null;
+
+  return (
+    <>
+      <Circle
+        ref={accuracyCircleRef}
+        center={[userLocation.coords.latitude, userLocation.coords.longitude]}
+        radius={userLocation.coords.accuracy || 0}
+        pathOptions={{ color: '#4285F4', fillColor: '#4285F4', fillOpacity: 0.2, stroke: false }}
+      />
+      <CircleMarker
+        ref={markerRef}
+        center={[userLocation.coords.latitude, userLocation.coords.longitude]}
+        radius={8}
+        pathOptions={{ color: 'white', fillColor: '#4285F4', fillOpacity: 1, weight: 2 }}
+      >
+        <Popup>You are here</Popup>
+      </CircleMarker>
+    </>
+  );
+};
 
 const FitBounds = ({ data }: { data: any }) => {
   const map = useMap();
@@ -117,7 +200,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source }) => {
           return;
         }
         subscription = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
+          { accuracy: Location.Accuracy.High, timeInterval: 1000, distanceInterval: 1 },
           (location) => setUserLocation(location)
         );
       } catch (err) {
@@ -237,16 +320,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source }) => {
             {geoJsonData && <GeoJSON key={url} data={geoJsonData} style={{ color: theme.colors.primary, weight: 4 }} />}
             {geoJsonData && <FitBounds data={geoJsonData} />}
 
-            {userLocation && (
-              <CircleMarker
-                key={`${userLocation.timestamp}`}
-                center={[userLocation.coords.latitude, userLocation.coords.longitude]}
-                radius={8}
-                pathOptions={{ color: 'white', fillColor: '#4285F4', fillOpacity: 1 }}
-              >
-                  <Popup>You are here</Popup>
-              </CircleMarker>
-            )}
+            {userLocation && <UserLocationMarker userLocation={userLocation} />}
           </MapContainer>
        </View>
 
