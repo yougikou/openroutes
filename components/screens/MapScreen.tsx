@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, Platform, Linking, Alert } from 'react-native';
 import { ActivityIndicator, FAB, Text, useTheme, Button } from 'react-native-paper';
 import { useRouter } from 'expo-router';
@@ -6,7 +6,12 @@ import * as Location from 'expo-location';
 import { convertBlobUrlToRawUrl } from '../../utils/url';
 
 // Only import Leaflet modules on Web to avoid Metro bundler issues on Native
-let MapContainer: any, TileLayer: any, GeoJSON: any, CircleMarker: any, Circle: any, Popup: any, useMap: any, L: any;
+let MapContainer: any, TileLayer: any, GeoJSON: any, CircleMarker: any, Circle: any, Popup: any, Marker: any, useMap: any, L: any;
+
+interface DeviceOrientationEventiOS extends DeviceOrientationEvent {
+  requestPermission?: () => Promise<'granted' | 'denied'>;
+  webkitCompassHeading?: number;
+}
 
 if (Platform.OS === 'web') {
   // Ensure we are in a browser environment before requiring Leaflet
@@ -19,6 +24,7 @@ if (Platform.OS === 'web') {
       CircleMarker = ReactLeaflet.CircleMarker;
       Circle = ReactLeaflet.Circle;
       Popup = ReactLeaflet.Popup;
+      Marker = ReactLeaflet.Marker;
       useMap = ReactLeaflet.useMap;
       L = require('leaflet');
     } catch (e) {
@@ -27,9 +33,10 @@ if (Platform.OS === 'web') {
   }
 }
 
-const UserLocationMarker = ({ userLocation }: { userLocation: Location.LocationObject }) => {
+const UserLocationMarker = ({ userLocation, heading }: { userLocation: Location.LocationObject, heading?: number | null }) => {
   const markerRef = React.useRef<any>(null);
   const accuracyCircleRef = React.useRef<any>(null);
+  const headingMarkerRef = React.useRef<any>(null);
   const requestRef = React.useRef<number>();
 
   useEffect(() => {
@@ -56,6 +63,9 @@ const UserLocationMarker = ({ userLocation }: { userLocation: Location.LocationO
         accuracyCircleRef.current.setLatLng([endLat, endLng]);
         accuracyCircleRef.current.setRadius(endAccuracy);
       }
+      if (headingMarkerRef.current) {
+        headingMarkerRef.current.setLatLng([endLat, endLng]);
+      }
       return;
     }
 
@@ -74,6 +84,9 @@ const UserLocationMarker = ({ userLocation }: { userLocation: Location.LocationO
         accuracyCircleRef.current.setLatLng([currentLat, currentLng]);
         accuracyCircleRef.current.setRadius(endAccuracy);
       }
+      if (headingMarkerRef.current) {
+        headingMarkerRef.current.setLatLng([currentLat, currentLng]);
+      }
 
       if (t < 1) {
         requestRef.current = requestAnimationFrame(animate);
@@ -87,6 +100,32 @@ const UserLocationMarker = ({ userLocation }: { userLocation: Location.LocationO
     };
   }, [userLocation]);
 
+  useEffect(() => {
+    if (headingMarkerRef.current && heading != null) {
+       const el = headingMarkerRef.current.getElement();
+       if (el) {
+          const inner = el.querySelector('.heading-arrow');
+          if (inner) {
+             (inner as HTMLElement).style.transform = `rotate(${heading}deg)`;
+          }
+       }
+    }
+  }, [heading]);
+
+  const headingIcon = React.useMemo(() => {
+     if (!L) return null;
+     return L.divIcon({
+        className: '',
+        iconSize: [50, 50],
+        iconAnchor: [25, 25],
+        html: `<div class="heading-arrow" style="width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; transform-origin: center;">
+                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                   <path d="M12 2L22 22L12 18L2 22L12 2Z" fill="#4285F4" stroke="white" stroke-width="2" stroke-linejoin="round"/>
+                 </svg>
+               </div>`
+     });
+  }, []);
+
   if (!userLocation) return null;
 
   return (
@@ -97,6 +136,14 @@ const UserLocationMarker = ({ userLocation }: { userLocation: Location.LocationO
         radius={userLocation.coords.accuracy || 0}
         pathOptions={{ color: '#4285F4', fillColor: '#4285F4', fillOpacity: 0.2, stroke: false }}
       />
+      {heading != null && headingIcon && (
+         <Marker
+           ref={headingMarkerRef}
+           position={[userLocation.coords.latitude, userLocation.coords.longitude]}
+           icon={headingIcon}
+           zIndexOffset={100}
+         />
+      )}
       <CircleMarker
         ref={markerRef}
         center={[userLocation.coords.latitude, userLocation.coords.longitude]}
@@ -138,6 +185,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source }) => {
   const router = useRouter();
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
+  const [heading, setHeading] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mapInstance, setMapInstance] = useState<any>(null);
@@ -270,8 +318,46 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source }) => {
     }
   };
 
+  const handleOrientation = useCallback((event: DeviceOrientationEvent) => {
+    let compass = 0;
+    const iOS = event as DeviceOrientationEventiOS;
+    if (iOS.webkitCompassHeading !== undefined && iOS.webkitCompassHeading !== null) {
+      compass = iOS.webkitCompassHeading;
+    } else if (event.alpha !== null) {
+       compass = Math.abs(event.alpha - 360) % 360;
+    }
+    setHeading(compass);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (Platform.OS === 'web') {
+        window.removeEventListener('deviceorientation', handleOrientation);
+      }
+    };
+  }, [handleOrientation]);
+
+  const handleEnableCompass = async () => {
+     if (Platform.OS !== 'web') return;
+
+     if (typeof (DeviceOrientationEvent as unknown as DeviceOrientationEventiOS).requestPermission === 'function') {
+        try {
+           const permission = await (DeviceOrientationEvent as unknown as DeviceOrientationEventiOS).requestPermission!();
+           if (permission === 'granted') {
+              window.addEventListener('deviceorientation', handleOrientation);
+           }
+        } catch (error) {
+           console.warn('Compass permission error:', error);
+        }
+     } else {
+        window.addEventListener('deviceorientation', handleOrientation);
+     }
+  };
+
   const handleLocateMe = async () => {
     if (Platform.OS !== 'web') return;
+
+    handleEnableCompass();
 
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -351,7 +437,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source }) => {
             {geoJsonData && <GeoJSON key={url} data={geoJsonData} style={{ color: theme.colors.primary, weight: 4 }} />}
             {geoJsonData && <FitBounds data={geoJsonData} />}
 
-            {userLocation && <UserLocationMarker userLocation={userLocation} />}
+            {userLocation && <UserLocationMarker userLocation={userLocation} heading={heading} />}
           </MapContainer>
        </View>
 
