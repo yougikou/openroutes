@@ -192,7 +192,9 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source }) => {
   // Track User Location (Background/Auto)
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
-    const startTracking = async () => {
+    let watchId: number | null = null;
+
+    const startTrackingNative = async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
@@ -209,10 +211,39 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source }) => {
     };
 
     if (Platform.OS === 'web') {
-        startTracking();
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        watchId = navigator.geolocation.watchPosition(
+          (position) => {
+            setUserLocation({
+              coords: {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                altitude: position.coords.altitude,
+                accuracy: position.coords.accuracy,
+                altitudeAccuracy: position.coords.altitudeAccuracy,
+                heading: position.coords.heading,
+                speed: position.coords.speed,
+              },
+              timestamp: position.timestamp,
+            });
+          },
+          (error) => {
+            console.warn('Geolocation error:', error);
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+          }
+        );
+      }
+    } else {
+      startTrackingNative();
     }
 
     return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
       if (subscription) {
         try {
           subscription.remove();
