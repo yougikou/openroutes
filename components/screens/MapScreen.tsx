@@ -116,11 +116,17 @@ const UserLocationMarker = ({ userLocation, heading }: { userLocation: Location.
      if (!L) return null;
      return L.divIcon({
         className: '',
-        iconSize: [50, 50],
-        iconAnchor: [25, 25],
-        html: `<div class="heading-arrow" style="width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; transform-origin: center;">
-                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                   <path d="M12 2L22 22L12 18L2 22L12 2Z" fill="#4285F4" stroke="white" stroke-width="2" stroke-linejoin="round"/>
+        iconSize: [80, 80],
+        iconAnchor: [40, 40],
+        html: `<div class="heading-arrow" style="width: 80px; height: 80px; display: flex; justify-content: center; align-items: center; transform-origin: center; pointer-events: none;">
+                 <svg width="80" height="80" viewBox="0 0 80 80" fill="none" style="display:block;">
+                   <defs>
+                     <radialGradient id="fanGradient" cx="40" cy="40" r="40" gradientUnits="userSpaceOnUse">
+                       <stop offset="0%" stop-color="#4285F4" stop-opacity="0.5" />
+                       <stop offset="100%" stop-color="#4285F4" stop-opacity="0" />
+                     </radialGradient>
+                   </defs>
+                   <path d="M40 40 L17 7 A 40 40 0 0 1 63 7 Z" fill="url(#fanGradient)" />
                  </svg>
                </div>`
      });
@@ -141,7 +147,7 @@ const UserLocationMarker = ({ userLocation, heading }: { userLocation: Location.
            ref={headingMarkerRef}
            position={[userLocation.coords.latitude, userLocation.coords.longitude]}
            icon={headingIcon}
-           zIndexOffset={100}
+           zIndexOffset={0}
          />
       )}
       <CircleMarker
@@ -452,6 +458,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source }) => {
          icon="crosshairs-gps"
          style={[styles.locateFab, { backgroundColor: theme.colors.surface }]}
          onPress={handleLocateMe}
+         accessibilityLabel="Locate Me"
          size="small"
        />
 
