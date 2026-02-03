@@ -149,16 +149,37 @@ const HomeScreen = (): React.ReactElement => {
     });
   }, [router]);
 
-  const handleMapPress = useCallback((url: string | null, title: string) => {
-    if (!url || url.indexOf('github') === -1) {
-      showSnackbar(i18n.t('home_download_prep'));
-      return;
-    }
-    router.push({
-      pathname: '/map',
-      params: { url: url, title: title, source: 'home' }
-    });
-  }, [router, showSnackbar]);
+  const handleMapPress = useCallback(
+    async (url: string | null, title: string) => {
+      if (!url || url.indexOf('github') === -1) {
+        showSnackbar(i18n.t('home_map_prep'));
+        return;
+      }
+      try {
+        const response = await fetch(convertBlobUrlToRawUrl(url));
+        if (!response.ok) {
+          showSnackbar(i18n.t('home_map_prep'));
+          return;
+        }
+
+        try {
+          await response.json();
+        } catch (e) {
+          showSnackbar(i18n.t('home_file_format_error'));
+          return;
+        }
+
+        router.push({
+          pathname: '/map',
+          params: { url: url, title: title, source: 'home' },
+        });
+      } catch (error) {
+        console.error('Failed to verify GeoJSON', error);
+        showSnackbar(i18n.t('home_map_prep'));
+      }
+    },
+    [router, showSnackbar],
+  );
 
   const renderItem: ListRenderItem<RouteIssue> = useCallback(
     ({ item, index }) => {
