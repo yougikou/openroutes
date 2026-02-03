@@ -313,7 +313,14 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source, standalone })
     if (Platform.OS === 'web') {
         const currentUrl = new URL(window.location.href);
         currentUrl.searchParams.set('standalone', 'true');
-        window.open(currentUrl.toString(), '_blank');
+
+        const link = document.createElement('a');
+        link.href = currentUrl.toString();
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     } else {
         if (url) Linking.openURL(convertBlobUrlToRawUrl(url));
     }
@@ -510,7 +517,7 @@ const styles = StyleSheet.create({
   },
   openFab: {
     position: 'absolute',
-    bottom: 32,
+    bottom: 80,
     left: 16,
     zIndex: 10000,
   },
