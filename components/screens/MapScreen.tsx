@@ -184,9 +184,10 @@ interface MapScreenProps {
   url?: string;
   title?: string;
   source?: string;
+  standalone?: string;
 }
 
-const MapScreen: React.FC<MapScreenProps> = ({ url, title, source }) => {
+const MapScreen: React.FC<MapScreenProps> = ({ url, title, source, standalone }) => {
   const theme = useTheme();
   const router = useRouter();
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
@@ -310,7 +311,9 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source }) => {
 
   const handleOpenInBrowser = () => {
     if (Platform.OS === 'web') {
-        window.open(window.location.href, '_blank');
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('standalone', 'true');
+        window.open(currentUrl.toString(), '_blank');
     } else {
         if (url) Linking.openURL(convertBlobUrlToRawUrl(url));
     }
@@ -462,13 +465,14 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source }) => {
          size="small"
        />
 
-       <FAB
-         icon="open-in-new"
-         style={[styles.openFab, { backgroundColor: theme.colors.surface }]}
-         onPress={handleOpenInBrowser}
-         size="small"
-         label="Open in New Window"
-       />
+       {!standalone && (
+         <FAB
+           icon="open-in-new"
+           style={[styles.openFab, { backgroundColor: theme.colors.surface }]}
+           onPress={handleOpenInBrowser}
+           size="small"
+         />
+       )}
 
        <View style={[styles.titleContainer, { backgroundColor: theme.colors.surfaceVariant }]}>
           <Text variant="titleMedium" numberOfLines={1}>{title || 'Route Map'}</Text>
@@ -507,7 +511,7 @@ const styles = StyleSheet.create({
   openFab: {
     position: 'absolute',
     bottom: 32,
-    right: 16,
+    left: 16,
     zIndex: 10000,
   },
   titleContainer: {
