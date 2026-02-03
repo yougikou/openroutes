@@ -255,14 +255,15 @@ const HomeScreen = (): React.ReactElement => {
                     icon="map-search-outline"
                     size={20}
                     iconColor={theme.colors.primary}
-                    disabled={!geoJsonUri}
                     onPress={() => {
-                      if (geoJsonUri) {
-                        router.push({
-                          pathname: '/map',
-                          params: { url: geoJsonUri, title: item.title, source: 'home' }
-                        });
+                      if (!geoJsonUri || geoJsonUri.indexOf('github') === -1) {
+                        showSnackbar(i18n.t('home_download_prep'));
+                        return;
                       }
+                      router.push({
+                        pathname: '/map',
+                        params: { url: geoJsonUri, title: item.title, source: 'home' }
+                      });
                     }}
                   />
                   <IconButton icon="arrow-right" size={20} iconColor={theme.colors.primary} style={{ marginLeft: 'auto', margin: 0 }} onPress={() => handleToDetail(item)} />
