@@ -25,7 +25,7 @@ const GithubAuthScreen = (): React.ReactElement => {
         const code = params.code ?? null;
         if (code) {
           await exchangeToken(code);
-          router.replace('/(tabs)/setting');
+          router.replace('/app/(tabs)/setting');
         } else {
           const token = await readData('github_access_token');
           if (token) {
@@ -36,7 +36,7 @@ const GithubAuthScreen = (): React.ReactElement => {
         }
       } catch (error) {
         console.error('Error exchange Token:', error);
-        router.replace('/(tabs)/setting');
+        router.replace('/app/(tabs)/setting');
       }
     };
 
