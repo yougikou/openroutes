@@ -312,7 +312,8 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source, standalone })
   const handleOpenInBrowser = () => {
     if (Platform.OS === 'web') {
         const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.set('standalone', 'true');
+        // Transform /openroutes/app/map -> /openroutes/view to escape PWA scope
+        currentUrl.pathname = currentUrl.pathname.replace(/\/app\/map\/?$/, '/view');
 
         const link = document.createElement('a');
         link.href = currentUrl.toString();
