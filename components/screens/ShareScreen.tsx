@@ -348,7 +348,7 @@ export default function ShareScreen() {
                     <View style={{ alignItems: 'center' }}>
                       <IconButton icon="file-check" size={40} iconColor={theme.colors.primary} />
                       <Text variant="bodyMedium" numberOfLines={1} style={{ fontWeight: 'bold', marginTop: 4 }}>{routeData.originFileName}</Text>
-                      <Text variant="bodySmall" style={{ color: theme.colors.secondary }}>GPX/KML Ready</Text>
+                      <Text variant="bodySmall" style={{ color: theme.colors.secondary }}>{i18n.t('share_file_ready')}</Text>
                     </View>
                   ) : (
                     <View style={{ alignItems: 'center' }}>
@@ -421,7 +421,7 @@ export default function ShareScreen() {
                 {routeData.description ? (
                   <Text variant="bodyLarge">{routeData.description}</Text>
                 ) : (
-                  <Text variant="bodyLarge" style={{ color: theme.colors.outline, fontStyle: 'italic' }}>{i18n.t('share_card_no_desc') || "Tap to add description..."}</Text>
+                  <Text variant="bodyLarge" style={{ color: theme.colors.outline, fontStyle: 'italic' }}>{i18n.t('share_card_no_desc') || i18n.t('share_tap_to_desc')}</Text>
                 )}
               </Pressable>
             </View>
@@ -605,11 +605,11 @@ const DescEditModal = ({ isVisible, setVisible, routeData, updateRouteData }) =>
         <TextInput mode="outlined"
           multiline={true}
           style={{ flex: 1, backgroundColor: 'transparent' }}
-          placeholder="Describe the route..."
+          placeholder={i18n.t('share_desc_placeholder')}
           value={routeData.description}
           onChangeText={(value) => updateRouteData('description', value)} />
         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16 }}>
-          <Button onPress={() => setVisible(false)}>Done</Button>
+          <Button onPress={() => setVisible(false)}>{i18n.t('share_done')}</Button>
         </View>
       </Modal>
     </Portal>
@@ -660,30 +660,35 @@ const DashEditModal = ({ isVisible, setVisible, routeData, updateRouteData }) =>
   };
 
   const onTextChange = (value) => {
-    setDateStr(value);
-    if (value != null && value.match(/^\d{4}-\d{2}-\d{2}$/) != null) {
-      updateRouteData('date', new Date(value));
+    const digits = value.replace(/\D/g, '');
+    let formatted = digits;
+    if (digits.length > 4) {
+      formatted = digits.slice(0, 4) + '-' + digits.slice(4);
+    }
+    if (digits.length > 6) {
+      formatted = formatted.slice(0, 7) + '-' + digits.slice(6, 8);
+    }
+
+    setDateStr(formatted);
+    if (formatted.match(/^\d{4}-\d{2}-\d{2}$/) != null) {
+      updateRouteData('date', new Date(formatted));
     }
   };
 
   return (
     <Portal>
       <Modal visible={isVisible} onDismiss={() => setVisible(false)} contentContainerStyle={styles.containerStyle}>
-        <Text variant="headlineSmall" style={{ marginBottom: 20, fontWeight: 'bold' }}>Edit Details</Text>
+        <Text variant="headlineSmall" style={{ marginBottom: 20, fontWeight: 'bold' }}>{i18n.t('share_edit_dialog_title')}</Text>
 
         <TextInput style={styles.input} mode="outlined"
-          label={i18n.t('share_course_name')} value={routeData.name}
+          label={i18n.t('share_route_name_label')} value={routeData.name}
           onChangeText={(value) => updateRouteData('name', value)} right={<TextInput.Affix text="/50" />} />
 
-        <Pressable onPress={() => setShow(true)}>
-          <View pointerEvents="none">
-            <TextInput style={styles.input} mode="outlined"
-              label={i18n.t('share_record_date')} value={dateStr}
-              onChangeText={(value) => onTextChange(value)}
-              right={<TextInput.Icon icon="calendar" />}
-            />
-          </View>
-        </Pressable>
+        <TextInput style={styles.input} mode="outlined"
+          label={i18n.t('share_record_date')} value={dateStr}
+          onChangeText={(value) => onTextChange(value)}
+          right={<TextInput.Icon icon="calendar" onPress={() => setShow(true)} />}
+        />
 
         {show && (
           <DateTimePicker
@@ -713,7 +718,7 @@ const DashEditModal = ({ isVisible, setVisible, routeData, updateRouteData }) =>
         </View>
 
         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8 }}>
-          <Button mode="contained" onPress={() => setVisible(false)}>Save Changes</Button>
+          <Button mode="contained" onPress={() => setVisible(false)}>{i18n.t('share_save_changes')}</Button>
         </View>
       </Modal>
     </Portal>
