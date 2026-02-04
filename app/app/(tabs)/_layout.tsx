@@ -2,8 +2,8 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { Tabs } from 'expo-router/tabs';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import i18n from '../../components/i18n/i18n';
-import { useLanguage } from '../../components/i18n/LanguageContext';
+import i18n from '../../../components/i18n/i18n';
+import { useLanguage } from '../../../components/i18n/LanguageContext';
 
 export default function TabLayout() {
   const { locale } = useLanguage();

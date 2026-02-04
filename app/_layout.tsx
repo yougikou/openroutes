@@ -9,10 +9,9 @@ export default function RootLayout(): React.ReactElement {
     <LanguageProvider>
       <PaperProvider theme={theme}>
         <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="map" />
-          <Stack.Screen name="detail" />
-          <Stack.Screen name="githubauth" />
+          <Stack.Screen name="index" />
+          <Stack.Screen name="app" />
+          <Stack.Screen name="view" />
         </Stack>
       </PaperProvider>
     </LanguageProvider>
