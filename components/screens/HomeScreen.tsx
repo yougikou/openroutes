@@ -144,7 +144,7 @@ const HomeScreen = (): React.ReactElement => {
 
   const handleToDetail = useCallback((item: RouteIssue) => {
     router.push({
-      pathname: '/detail',
+      pathname: '/app/detail',
       params: { item: JSON.stringify(item) }
     });
   }, [router]);
@@ -170,7 +170,7 @@ const HomeScreen = (): React.ReactElement => {
         }
 
         router.push({
-          pathname: '/map',
+          pathname: '/app/map',
           params: { url: url, title: title, source: 'home' },
         });
       } catch (error) {

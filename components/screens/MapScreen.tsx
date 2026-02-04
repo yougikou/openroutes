@@ -331,7 +331,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source, standalone })
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(tabs)/');
+      router.replace('/app/(tabs)/');
     }
   };
 

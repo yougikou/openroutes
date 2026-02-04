@@ -94,7 +94,7 @@ export default function RouteDetailScreen() {
                     style={{ marginTop: 24 }}
                     onPress={() => {
                         router.push({
-                          pathname: '/map',
+                          pathname: '/app/map',
                           params: { url: routeItem.geojson.uri, title: routeItem.title, source: 'detail' }
                         });
                     }}
