@@ -12,7 +12,7 @@ import type { FeatureCollection } from 'geojson';
 import i18n from '../i18n/i18n';
 import { createIssue, uploadImgFile, uploadGeoJsonFile } from "../apis/GitHubAPI";
 import { readData } from "../apis/StorageAPI";
-import { extractRecordDate, calculateDistance, calculateDuration } from "../apis/GeoDataAPI";
+import { extractRecordDate, calculateDistance, calculateDuration, validateAndFixGeoJson } from "../apis/GeoDataAPI";
 import Redirector from "../Redirector";
 import { DOMParser } from '@xmldom/xmldom';
 import { downloadFile } from '../../utils/FileHelper';
@@ -109,16 +109,19 @@ export default function ShareScreen() {
         if (!convertedData) {
           return;
         }
-        const recordDate = extractRecordDate(convertedData);
+
+        const fixedData = validateAndFixGeoJson(convertedData);
+
+        const recordDate = extractRecordDate(fixedData);
         updateRouteData('date', recordDate ?? null);
 
-        const distance = calculateDistance(convertedData);
+        const distance = calculateDistance(fixedData);
         updateRouteData('distance_km', distance > 0 ? distance : null);
 
-        const duration = calculateDuration(convertedData);
+        const duration = calculateDuration(fixedData);
         updateRouteData('duration_hour', duration > 0 ? duration : null);
 
-        updateRouteData('geojsonData', convertedData);
+        updateRouteData('geojsonData', fixedData);
       };
 
       const parseFile = (fileContent: string) => {

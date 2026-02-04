@@ -49,3 +49,41 @@ export const calculateDuration = (geojson: FeatureCollection): number => {
 
   return parseFloat(totalTime.toFixed(1));
 };
+
+export const validateAndFixGeoJson = (geojson: FeatureCollection): FeatureCollection => {
+  const tracks = geojson.features.filter(
+    (f) => f.geometry?.type === 'LineString' || f.geometry?.type === 'MultiLineString'
+  );
+  const points = geojson.features.filter((f) => f.geometry?.type === 'Point');
+
+  if (tracks.length === 0 && points.length > 50) {
+    console.log('Detected point-only GPX, converting to track...');
+
+    const coordinates = points.map((p) => (p.geometry as any).coordinates);
+    const times = points.map((p) => p.properties?.time).filter((t) => t);
+
+    const properties: any = {
+      name: 'Converted Track',
+    };
+
+    if (times.length === coordinates.length) {
+      properties.coordTimes = times;
+    }
+
+    const newTrack: Feature<LineString> = {
+      type: 'Feature',
+      properties: properties,
+      geometry: {
+        type: 'LineString',
+        coordinates: coordinates as any,
+      },
+    };
+
+    return {
+      ...geojson,
+      features: [newTrack],
+    };
+  }
+
+  return geojson;
+};
