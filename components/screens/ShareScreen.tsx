@@ -321,8 +321,19 @@ export default function ShareScreen() {
       <ScrollView contentContainerStyle={{ alignItems: 'center', paddingBottom: 100 }}>
         <View style={{ width: '100%', maxWidth: contentMaxWidth, padding: 16 }}>
 
-          {/* SECTION 1: UPLOAD */}
-          <Surface style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
+          {!githubToken && (
+            <Surface style={[styles.sectionCard, { backgroundColor: theme.colors.errorContainer, marginBottom: 20 }]} elevation={1}>
+              <View style={{ padding: 16, alignItems: 'center' }}>
+                <Text variant="bodyLarge" style={{ color: theme.colors.onErrorContainer, fontWeight: 'bold', textAlign: 'center' }}>
+                  {i18n.t('share_require_github_connection')}
+                </Text>
+              </View>
+            </Surface>
+          )}
+
+          <View pointerEvents={!githubToken ? 'none' : 'auto'} style={{ opacity: !githubToken ? 0.5 : 1 }}>
+            {/* SECTION 1: UPLOAD */}
+            <Surface style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
             <View style={[styles.sectionHeader, { borderBottomColor: theme.colors.outlineVariant }]}>
               <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>1. {i18n.t('share_upload_file') || 'Upload & Media'}</Text>
             </View>
@@ -412,6 +423,7 @@ export default function ShareScreen() {
               </Pressable>
             </View>
           </Surface>
+          </View>
 
         </View>
       </ScrollView>
