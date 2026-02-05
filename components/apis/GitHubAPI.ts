@@ -188,7 +188,18 @@ export const fetchIssues = async (
   });
 
   if (searchQuery && searchQuery.trim().length > 0) {
-    const q = `repo:${owner}/${repo} is:issue label:route ${searchQuery}`;
+    let q = `repo:${owner}/${repo} is:issue label:route ${searchQuery}`;
+    const stateFilter = filters.state;
+    if (stateFilter === 'open') {
+      q += ' is:open';
+    } else if (stateFilter === 'closed') {
+      q += ' is:closed';
+    } else if (stateFilter === 'all') {
+      // do nothing
+    } else {
+      // undefined or unknown -> default to open
+      q += ' is:open';
+    }
     searchParams.append('q', q);
     url = 'https://api.github.com/search/issues?' + searchParams.toString();
   } else {
