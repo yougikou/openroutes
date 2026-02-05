@@ -458,12 +458,14 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source, standalone })
           </MapContainer>
        </View>
 
-       <FAB
-         icon="arrow-left"
-         style={[styles.backFab, { backgroundColor: theme.colors.surface }]}
-         onPress={handleBack}
-         size="small"
-       />
+       {!standalone && (
+         <FAB
+           icon="arrow-left"
+           style={[styles.backFab, { backgroundColor: theme.colors.surface }]}
+           onPress={handleBack}
+           size="small"
+         />
+       )}
 
        <FAB
          icon="crosshairs-gps"
@@ -482,7 +484,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source, standalone })
          />
        )}
 
-       <View style={[styles.titleContainer, { backgroundColor: theme.colors.surfaceVariant }]}>
+       <View style={[styles.titleContainer, { backgroundColor: theme.colors.surfaceVariant }, standalone ? { left: 16 } : undefined]}>
           <Text variant="titleMedium" numberOfLines={1}>{title || 'Route Map'}</Text>
        </View>
     </View>
