@@ -56,7 +56,7 @@ export default function RouteDetailScreen() {
             <Text variant="headlineMedium" style={{ fontWeight: 'bold', marginBottom: 8 }}>{routeItem.title}</Text>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-                <Avatar.Image size={40} source={{ uri: routeItem.user.avatar_url }} />
+                <Avatar.Image size={40} source={{ uri: routeItem.user.avatar_url }} style={{ backgroundColor: 'transparent' }} />
                 <View style={{ marginLeft: 12 }}>
                     <Text variant="titleSmall">{routeItem.user.login}</Text>
                     <Text variant="bodySmall" style={{ color: theme.colors.outline }}>{new Date(routeItem.created_at).toLocaleDateString()}</Text>
@@ -85,8 +85,6 @@ export default function RouteDetailScreen() {
 
             <Divider style={{ marginVertical: 16 }} />
 
-            <Text variant="bodyLarge">{routeItem.description}</Text>
-
             {routeItem.geojson?.uri && (
                  <Button
                     mode="contained"
@@ -99,8 +97,15 @@ export default function RouteDetailScreen() {
                         });
                     }}
                  >
-                    View on Map
+                    {i18n.t('view_in_map')}
                  </Button>
+            )}
+
+            {routeItem.description && (
+                <View style={{ marginTop: 24 }}>
+                   <Text variant="titleMedium" style={{ fontWeight: 'bold', marginBottom: 8 }}>{i18n.t('detail_info_title')}</Text>
+                   <Text variant="bodyLarge">{routeItem.description}</Text>
+                </View>
             )}
          </View>
       </ScrollView>
