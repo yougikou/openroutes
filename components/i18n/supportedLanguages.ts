@@ -78,6 +78,8 @@ export const translations: Record<Locale, TranslationDictionary> = {
     setting_version: 'Version',
     setting_opensource: 'Open Source',
     setting_visit_repo: 'Visit our repository',
+    view_in_map: 'View on Map',
+    detail_info_title: 'Detailed Info',
   },
   zh: {
     bottom_explore: '浏览',
@@ -154,6 +156,8 @@ export const translations: Record<Locale, TranslationDictionary> = {
     setting_version: '版本',
     setting_opensource: '开源',
     setting_visit_repo: '访问我们的仓库',
+    view_in_map: '在地图中查看',
+    detail_info_title: '详细补充信息',
   },
   ja: {
     bottom_explore: '探す',
@@ -230,6 +234,8 @@ export const translations: Record<Locale, TranslationDictionary> = {
     setting_version: 'バージョン',
     setting_opensource: 'オープンソース',
     setting_visit_repo: 'リポジトリを見る',
+    view_in_map: '地図で見る',
+    detail_info_title: '詳細情報',
   },
 };
 
