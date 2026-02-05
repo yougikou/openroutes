@@ -80,6 +80,10 @@ export const translations: Record<Locale, TranslationDictionary> = {
     setting_visit_repo: 'Visit our repository',
     view_in_map: 'View on Map',
     detail_info_title: 'Detailed Info',
+    pwa_install_title: 'Install App',
+    pwa_install_desc: 'Install this app on your device for a better experience.',
+    pwa_install_btn: 'Install',
+    pwa_dismiss_btn: 'Not now',
   },
   zh: {
     bottom_explore: '浏览',
@@ -158,6 +162,10 @@ export const translations: Record<Locale, TranslationDictionary> = {
     setting_visit_repo: '访问我们的仓库',
     view_in_map: '在地图中查看',
     detail_info_title: '详细补充信息',
+    pwa_install_title: '安装应用',
+    pwa_install_desc: '在您的设备上安装此应用以获得更好的体验。',
+    pwa_install_btn: '安装',
+    pwa_dismiss_btn: '暂不安装',
   },
   ja: {
     bottom_explore: '探す',
@@ -236,6 +244,10 @@ export const translations: Record<Locale, TranslationDictionary> = {
     setting_visit_repo: 'リポジトリを見る',
     view_in_map: '地図で見る',
     detail_info_title: '詳細情報',
+    pwa_install_title: 'アプリをインストール',
+    pwa_install_desc: 'より良い体験のために、アプリをデバイスにインストールしてください。',
+    pwa_install_btn: 'インストール',
+    pwa_dismiss_btn: '今はしない',
   },
 };
 
