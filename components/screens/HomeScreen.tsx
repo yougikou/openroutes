@@ -14,7 +14,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { downloadFile } from '../../utils/FileHelper';
 import { convertBlobUrlToRawUrl } from '../../utils/url';
 
-const FILTERS: RouteFilters = { state: 'all' };
+const FILTERS: RouteFilters = { state: 'open' };
 const PER_PAGE = 10;
 
 interface SnackbarState {
