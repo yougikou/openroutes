@@ -22,13 +22,7 @@ export const calculateDistance = (geojson: FeatureCollection): number => {
   const pathFeatures = geojson.features.filter(isLineStringFeature);
 
   pathFeatures.forEach((feature) => {
-    const coordinates = feature.geometry.coordinates;
-    for (let i = 0; i < coordinates.length - 1; i += 1) {
-      const from = turf.point(coordinates[i]);
-      const to = turf.point(coordinates[i + 1]);
-      const distance = turf.distance(from, to, { units: 'kilometers' });
-      totalDistance += distance;
-    }
+    totalDistance += turf.length(feature, { units: 'kilometers' });
   });
 
   return parseFloat(totalDistance.toFixed(1));
