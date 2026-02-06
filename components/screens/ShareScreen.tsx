@@ -213,7 +213,6 @@ export default function ShareScreen() {
   const handleSubmit = async () => {
     setSubmitDialogVisible(false);
     setIsProcessing(true);
-    console.log(routeData);
     try {
       if (routeData.geojsonData === null ||
         routeData.date === null ||
