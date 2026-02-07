@@ -18,6 +18,7 @@ export default function Root({ children }: PropsWithChildren) {
           We use /openroutes/ because of the basePath in app.json.
         */}
         <link rel="apple-touch-icon" href="/openroutes/apple-touch-icon.png" />
+        <link rel="manifest" href="/openroutes/manifest.json" />
 
         {/*
           Disable body scrolling on web. This makes ScrollView components work closer to how they do on native.
