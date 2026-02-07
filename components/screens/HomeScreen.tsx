@@ -13,6 +13,7 @@ import RouteCard from '../RouteCard';
 import { useRouter } from 'expo-router';
 import { downloadFile } from '../../utils/FileHelper';
 import { convertBlobUrlToRawUrl } from '../../utils/url';
+import { getRouteCache, updateRouteCache, resetRouteCache } from '../../utils/RouteCache';
 
 const FILTERS: RouteFilters = { state: 'open' };
 const PER_PAGE = 10;
@@ -39,13 +40,14 @@ const HomeScreen = (): React.ReactElement => {
   const contentMaxWidth = isDesktop ? 1200 : 800; // Wider on desktop
 
   const [githubToken, setGithubToken] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [issues, setIssues] = useState<RouteIssue[]>([]);
-  const pageRef = useRef(1);
+  const [searchQuery, setSearchQuery] = useState(getRouteCache().searchQuery);
+  const [issues, setIssues] = useState<RouteIssue[]>(getRouteCache().issues);
+  const pageRef = useRef(getRouteCache().page);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(getRouteCache().page);
   const [isLoading, setIsLoading] = useState(false);
   const [snackbar, setSnackbar] = useState<SnackbarState>(INITIAL_SNACKBAR_STATE);
+  const listRef = useRef<FlashList<RouteIssue>>(null);
 
   const showSnackbar = useCallback((message: string) => {
     setSnackbar({ isVisible: true, message });
@@ -111,9 +113,14 @@ const HomeScreen = (): React.ReactElement => {
 
       const issuesData = await fetchIssues(pageRef.current, PER_PAGE, FILTERS, token, searchQuery);
       if (issuesData.length > 0) {
-        setIssues((prevIssues) => [...prevIssues, ...issuesData]);
+        setIssues((prevIssues) => {
+          const newIssues = [...prevIssues, ...issuesData];
+          updateRouteCache({ issues: newIssues });
+          return newIssues;
+        });
         pageRef.current += 1;
         setCurrentPage(pageRef.current);
+        updateRouteCache({ page: pageRef.current, searchQuery: searchQuery });
       }
     } catch (error) {
       console.error('Error fetching issues:', error);
@@ -123,11 +130,22 @@ const HomeScreen = (): React.ReactElement => {
   }, [isLoading, searchQuery]);
 
   useEffect(() => {
+    const cache = getRouteCache();
+    if (cache.issues.length > 0) {
+       // Restore scroll position if needed
+       if (cache.scrollOffset > 0) {
+         setTimeout(() => {
+           listRef.current?.scrollToOffset({ offset: cache.scrollOffset, animated: false });
+         }, 100);
+       }
+       return;
+    }
     loadIssues();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const resetAndLoad = useCallback(() => {
+    resetRouteCache();
     pageRef.current = 1;
     setCurrentPage(1);
     setIssues([]);
@@ -173,6 +191,11 @@ const HomeScreen = (): React.ReactElement => {
     },
     [router, showSnackbar],
   );
+
+  const handleScroll = useCallback((event: any) => {
+    const offset = event.nativeEvent.contentOffset.y;
+    updateRouteCache({ scrollOffset: offset });
+  }, []);
 
   const renderItem: ListRenderItem<RouteIssue> = useCallback(
     ({ item, index }) => {
@@ -226,6 +249,7 @@ const HomeScreen = (): React.ReactElement => {
           </View>
         ) : (
           <FlashList<RouteIssue>
+            ref={listRef}
             key={numColumns} // Force re-render when columns change
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderItem}
@@ -236,6 +260,8 @@ const HomeScreen = (): React.ReactElement => {
             contentContainerStyle={styles.listContent}
             estimatedItemSize={350}
             showsVerticalScrollIndicator={Platform.OS === 'web'} // Better scroll experience on web
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
           />
         )}
       </View>
