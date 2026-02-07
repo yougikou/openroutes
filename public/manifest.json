@@ -1,0 +1,22 @@
+{
+  "short_name": "OpenRoutes",
+  "name": "OpenRoutes",
+  "icons": [
+    {
+      "src": "/openroutes/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/openroutes/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/openroutes/",
+  "display": "standalone",
+  "theme_color": "#00BA63",
+  "background_color": "#FFFFFF",
+  "scope": "/openroutes/",
+  "orientation": "portrait"
+}
