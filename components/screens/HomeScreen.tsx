@@ -10,7 +10,7 @@ import tokml from 'geojson-to-kml';
 import togpx from 'togpx';
 import Redirector from '../Redirector';
 import RouteCard from '../RouteCard';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { downloadFile } from '../../utils/FileHelper';
 import { convertBlobUrlToRawUrl } from '../../utils/url';
 
@@ -46,13 +46,6 @@ const HomeScreen = (): React.ReactElement => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [snackbar, setSnackbar] = useState<SnackbarState>(INITIAL_SNACKBAR_STATE);
-  const [refreshCount, setRefreshCount] = useState(0);
-
-  useFocusEffect(
-    useCallback(() => {
-      setRefreshCount((prev) => prev + 1);
-    }, [])
-  );
 
   const showSnackbar = useCallback((message: string) => {
     setSnackbar({ isVisible: true, message });
@@ -234,7 +227,6 @@ const HomeScreen = (): React.ReactElement => {
         ) : (
           <FlashList<RouteIssue>
             key={numColumns} // Force re-render when columns change
-            extraData={refreshCount}
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderItem}
             data={issues}
