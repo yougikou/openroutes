@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, View, Platform, useWindowDimensions } from 'react-native';
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import { Appbar, Searchbar, Snackbar, ActivityIndicator, useTheme, Surface, IconButton } from 'react-native-paper';
@@ -48,6 +48,14 @@ const HomeScreen = (): React.ReactElement => {
   const [isLoading, setIsLoading] = useState(false);
   const [snackbar, setSnackbar] = useState<SnackbarState>(INITIAL_SNACKBAR_STATE);
   const listRef = useRef<FlashList<RouteIssue>>(null);
+
+  // Determine if we are restoring from cache to prevent animation re-run
+  const isRestored = useRef(getRouteCache().issues.length > 0);
+
+  // Calculate approximate initial index for FlashList to avoid visual jumps
+  const initialIndex = getRouteCache().scrollOffset > 0
+    ? Math.floor(getRouteCache().scrollOffset / 350)
+    : undefined;
 
   const showSnackbar = useCallback((message: string) => {
     setSnackbar({ isVisible: true, message });
@@ -129,16 +137,16 @@ const HomeScreen = (): React.ReactElement => {
     }
   }, [isLoading, searchQuery]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const cache = getRouteCache();
     if (cache.issues.length > 0) {
-       // Restore scroll position if needed
-       if (cache.scrollOffset > 0) {
-         setTimeout(() => {
-           listRef.current?.scrollToOffset({ offset: cache.scrollOffset, animated: false });
-         }, 100);
-       }
-       return;
+      // Restore scroll position precisely if needed
+      if (cache.scrollOffset > 0 && listRef.current) {
+        requestAnimationFrame(() => {
+          listRef.current?.scrollToOffset({ offset: cache.scrollOffset, animated: false });
+        });
+      }
+      return;
     }
     loadIssues();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -146,6 +154,7 @@ const HomeScreen = (): React.ReactElement => {
 
   const resetAndLoad = useCallback(() => {
     resetRouteCache();
+    isRestored.current = false;
     pageRef.current = 1;
     setCurrentPage(1);
     setIssues([]);
@@ -203,6 +212,7 @@ const HomeScreen = (): React.ReactElement => {
         <RouteCard
           item={item}
           index={index}
+          shouldAnimate={!isRestored.current}
           onDetailPress={handleToDetail}
           onGpxPress={downloadGpxFile}
           onKmlPress={downloadKmlFile}
@@ -255,6 +265,7 @@ const HomeScreen = (): React.ReactElement => {
             renderItem={renderItem}
             data={issues}
             numColumns={numColumns}
+            initialScrollIndex={initialIndex}
             onEndReached={() => { void loadIssues(); }}
             onEndReachedThreshold={0.5}
             contentContainerStyle={styles.listContent}
