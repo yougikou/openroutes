@@ -10,7 +10,7 @@ import tokml from 'geojson-to-kml';
 import togpx from 'togpx';
 import Redirector from '../Redirector';
 import RouteCard from '../RouteCard';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { downloadFile } from '../../utils/FileHelper';
 import { convertBlobUrlToRawUrl } from '../../utils/url';
 import { getRouteCache, updateRouteCache, resetRouteCache } from '../../utils/RouteCache';
@@ -48,6 +48,7 @@ const HomeScreen = (): React.ReactElement => {
   const [isLoading, setIsLoading] = useState(false);
   const [snackbar, setSnackbar] = useState<SnackbarState>(INITIAL_SNACKBAR_STATE);
   const listRef = useRef<FlashList<RouteIssue>>(null);
+  const isNavigating = useRef(false);
 
   // Determine if we are restoring from cache to prevent animation re-run
   const isRestored = useRef(getRouteCache().issues.length > 0);
@@ -137,14 +138,41 @@ const HomeScreen = (): React.ReactElement => {
     }
   }, [isLoading, searchQuery]);
 
+  useFocusEffect(
+    useCallback(() => {
+      isNavigating.current = false;
+
+      // Attempt to restore scroll position when screen is focused (handles back navigation without unmount)
+      const cache = getRouteCache();
+      if (cache.issues.length > 0 && cache.scrollOffset > 0 && listRef.current) {
+        if (Platform.OS === 'web') {
+           setTimeout(() => {
+             listRef.current?.scrollToOffset({ offset: cache.scrollOffset, animated: false });
+           }, 100);
+        } else {
+           // For native, usually not needed if view stays mounted, but safe to ensure
+           // requestAnimationFrame(() => {
+           //   listRef.current?.scrollToOffset({ offset: cache.scrollOffset, animated: false });
+           // });
+        }
+      }
+    }, [])
+  );
+
   useLayoutEffect(() => {
     const cache = getRouteCache();
     if (cache.issues.length > 0) {
       // Restore scroll position precisely if needed
       if (cache.scrollOffset > 0 && listRef.current) {
-        requestAnimationFrame(() => {
-          listRef.current?.scrollToOffset({ offset: cache.scrollOffset, animated: false });
-        });
+        if (Platform.OS === 'web') {
+          setTimeout(() => {
+            listRef.current?.scrollToOffset({ offset: cache.scrollOffset, animated: false });
+          }, 100);
+        } else {
+          requestAnimationFrame(() => {
+            listRef.current?.scrollToOffset({ offset: cache.scrollOffset, animated: false });
+          });
+        }
       }
       return;
     }
@@ -163,6 +191,7 @@ const HomeScreen = (): React.ReactElement => {
   }, [loadIssues]);
 
   const handleToDetail = useCallback((item: RouteIssue) => {
+    isNavigating.current = true;
     router.push({
       pathname: '/app/detail',
       params: { item: JSON.stringify(item) }
@@ -189,6 +218,7 @@ const HomeScreen = (): React.ReactElement => {
           return;
         }
 
+        isNavigating.current = true;
         router.push({
           pathname: '/app/map',
           params: { url: url, title: title, source: 'home' },
@@ -202,6 +232,7 @@ const HomeScreen = (): React.ReactElement => {
   );
 
   const handleScroll = useCallback((event: any) => {
+    if (isNavigating.current) return;
     const offset = event.nativeEvent.contentOffset.y;
     updateRouteCache({ scrollOffset: offset });
   }, []);
