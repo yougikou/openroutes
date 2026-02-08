@@ -10,13 +10,14 @@ import type { RouteIssue } from './apis/GitHubAPI';
 interface RouteCardProps {
   item: RouteIssue;
   index: number;
+  shouldAnimate?: boolean;
   onDetailPress: (item: RouteIssue) => void;
   onGpxPress: (title: string, uri: string | null) => void;
   onKmlPress: (title: string, uri: string | null) => void;
   onMapPress: (uri: string | null, title: string) => void;
 }
 
-const RouteCard = memo(({ item, index, onDetailPress, onGpxPress, onKmlPress, onMapPress }: RouteCardProps) => {
+const RouteCard = memo(({ item, index, shouldAnimate = true, onDetailPress, onGpxPress, onKmlPress, onMapPress }: RouteCardProps) => {
   const theme = useTheme();
   const geoJsonUri = item.geojson?.uri ?? null;
   const coverUri = item.coverimg?.uri ?? null;
@@ -30,7 +31,7 @@ const RouteCard = memo(({ item, index, onDetailPress, onGpxPress, onKmlPress, on
   const otherLabels = item.labels.filter(l => l.name !== difficultyLabel?.name);
 
   return (
-    <Animated.View entering={FadeInDown.delay(index * 50).springify()} style={{ flex: 1, padding: 8 }}>
+    <Animated.View entering={shouldAnimate ? FadeInDown.delay(index * 50).springify() : undefined} style={{ flex: 1, padding: 8 }}>
       <Pressable onPress={() => onDetailPress(item)} style={{ flex: 1 }}>
         <Surface style={[styles.cardSurface, { backgroundColor: theme.colors.surface }]} elevation={1}>
           {/* Image Section */}
