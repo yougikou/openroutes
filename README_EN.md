@@ -1,38 +1,58 @@
-# openroutes
-Routes recommended for wellness activities like hiking, cycling, and walking should be free for everyone to use.
+# OpenRoutes - Your Decentralized Outdoor Log 🌲🚵‍♂️
 
-[![日本語](https://img.shields.io/badge/lang-日本語-green.svg)](./README.md)
+Explore nature, record your tracks, completely free and in your control.
+
+[![日本語](https://img.shields.io/badge/lang-日本語-green.svg)](./README_JP.md)
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](./README_EN.md)
-[![中文](https://img.shields.io/badge/lang-中文-red.svg)](./README_ZH.md)
+[![中文](https://img.shields.io/badge/lang-中文-red.svg)](./README.md)
 
-[Demo Site](https://yougikou.github.io/openroutes/)
+[🌐 Visit Demo Site](https://yougikou.github.io/openroutes/)
 
-## Project Overview
-OpenRoutes is a serverless route sharing platform built with React Native (Expo).
-It aims to be a completely free ecosystem, using **GitHub Issues** as a database for the backend.
+## 🌟 What is OpenRoutes?
 
-### Architecture
--   **Frontend:** React Native / Expo (Web, iOS, Android supported)
--   **Database:** GitHub Issues (Metadata, Descriptions, Comments)
--   **Authentication:** GitHub OAuth
--   **Storage (Current):**
-    -   Images: Imgur API
-    -   GeoJSON (Route Data): GitHub Releases (Inbox) -> GitHub Repo (Assets Branch)
+OpenRoutes is a **Serverless** outdoor route sharing platform, built on React Native (Expo).
 
-## Features
-1.  **Explore Routes (Explore)**
-    -   Fetches route information from GitHub Issues and displays them in a list.
-    -   Supports downloading in GPX / KML formats.
-    -   Keyword search functionality.
-2.  **Share Route (Share)**
-    -   Upload GPX / KML files and automatically parse distance, duration, and date.
-    -   Attach photos and add descriptions to your route.
-    -   *Note: GitHub authentication is required to post.*
-3.  **Authentication (Auth)**
-    -   Log in using your GitHub account.
-    -   Logging in enables route creation and increases API rate limits.
+Unlike other platforms, **we use GitHub as our database**. This means:
+- **Completely Free**: No subscription fees, no ads.
+- **Data Autonomy**: Your route data is stored in a public GitHub repository, not a closed private server.
+- **Community Driven**: Every Issue is a route, every Comment is an interaction.
 
-## Getting Started
+## 📖 User Guide: How to use
+
+Just 3 simple steps to start your decentralized outdoor journey.
+
+### 1. Connect your GitHub Account 🔗
+Tap the **Setting** tab at the bottom, then tap **Connect** to log in.
+- **Why login is needed?** To prevent abuse and bypass API limits, we need to verify your identity.
+- **Permissions**: We need read and write permissions for Issues so you can post routes and comments.
+
+### 2. Explore Routes (Explore) 🗺️
+Browse hiking and cycling routes shared by the community on the home page.
+- **Map Mode**: Click a route in the list to enter the detailed map page.
+- **Download Data**: Supports exporting **GPX** or **KML** files to import into your watch or GPS device.
+
+### 3. Share Your Footprints (Share) 📝
+Click the **Share** tab at the bottom to upload your record.
+- **Upload File**: Select your `.gpx` or `.kml` file.
+- **Auto Parse**: System automatically calculates distance, climb, and duration.
+- **Add Photos**: Upload photos of the scenery (currently supports Imgur).
+- **Publish**: Click submit, and your route will be automatically generated as a GitHub Issue!
+
+---
+
+## 🔒 How is Data Saved?
+
+OpenRoutes uses a unique **Git-as-Backend** architecture:
+
+1.  **Route Metadata**: Title, description, difficulty, etc., are stored in the body of a **GitHub Issue** (YAML format).
+2.  **Route Files (GeoJSON)**: Converted route data is stored in **GitHub Releases** (Tag: `inbox`) for persistent storage.
+3.  **Images**: Currently hosted on **Imgur API** (Future plan to migrate to GitHub storage).
+
+---
+
+## 🛠️ Deployment & Development Guide
+
+If you are a developer, or want to deploy your own OpenRoutes instance, please refer to the following steps.
 
 ### Prerequisites
 -   Node.js (v22+ recommended)
@@ -46,43 +66,56 @@ npm install
 ### Configuration
 
 #### Local Development (`.env`)
-Create a `.env` file in the project root with the following variables:
+Create a `.env` file in the project root and configure the data source repository:
 
 ```ini
-# The GitHub username of the data source repository owner
+# The GitHub username of the data source repository owner (e.g. yougikou)
 EXPO_PUBLIC_GITHUB_OWNER=your_github_username
-# The name of the data source repository
+# The name of the data source repository (e.g. openroutes-data)
 EXPO_PUBLIC_GITHUB_REPO=your_repo_name
 ```
 
-#### GitHub Actions Secrets
-If using CI/CD (GitHub Actions), you must set the following secrets in Settings > Secrets and variables > Actions:
+#### GitHub Actions Secrets (For CI/CD)
+If using GitHub Actions for automated builds, you need to add Secrets in the repository settings:
 
-- **Required**
-    - `EXPO_PUBLIC_GITHUB_OWNER`: GitHub username for the data source.
-    - `EXPO_PUBLIC_GITHUB_REPO`: Repository name for the data source.
+- `EXPO_PUBLIC_GITHUB_OWNER`: GitHub username for the data source.
+- `EXPO_PUBLIC_GITHUB_REPO`: Repository name for the data source.
+- `ACCESS_TOKEN`: (Optional) If the data source is in a private repository or a different repository, a PAT with read/write permissions is required.
 
-- **Optional (If data source repo differs from app repo)**
-    - `ACCESS_TOKEN`: A Personal Access Token (PAT) with write permissions to the data source repository.
-        - **Classic PAT:** `repo` (Full control)
-        - **Fine-grained PAT:** `Contents` (Read and write) and `Workflows` (Read and write)
-
-### Running
+### Run Project
 ```bash
-# Run on Web
+# Run Web version
 npm run web
 
-# iOS / Android (Requires Expo Go)
+# Run iOS / Android (Requires Expo Go)
 npm run ios
 npm run android
 ```
 
-## Current Issues & Roadmap
--   **Data Persistence:** Currently, GeoJSON is stored in temporary storage (File.io), which risks broken links. We are considering moving to direct commits to a GitHub repository.
--   **Detail Screen:** The route detail map view is not yet implemented.
--   **Search Functionality:** UI implementation for filtering is needed.
+---
+
+## 🚀 Roadmap
+
+We are committed to building the purest outdoor community. Here is our development roadmap:
+
+### ✅ Phase 1: Core Features (Completed)
+- [x] **GitHub Login & Auth**: Secure OAuth flow.
+- [x] **GPX/KML Parsing**: Automatic distance and duration calculation on the frontend.
+- [x] **Map Visualization**: Leaflet-based interactive map.
+- [x] **Issue CMS**: Content management using GitHub Issues.
+- [x] **PWA Support**: Installable to home screen, basic offline functionality.
+
+### 🚧 Phase 2: Experience Upgrade (In Progress)
+- [ ] **Image Storage Migration**: Remove Imgur dependency, store images directly in GitHub Issue attachments or Releases to achieve 100% data decentralization.
+- [ ] **Offline Map Optimization**: Improve PWA cache strategy to support offline viewing of loaded map areas.
+- [ ] **Dark Mode**: UI theme adapted for night use.
+
+### 🔮 Phase 3: Ecosystem Expansion (Future)
+- [ ] **Multi-repo Support**: Allow users to switch data sources in settings (e.g., "View my private repo" vs "View community picks").
+- [ ] **Social Interaction**: Directly render Issue comments in the app, support likes and discussions.
+- [ ] **Event Organization**: Issue-based event registration function.
 
 ---
-### Purpose
-I love connecting with nature, and for such positive, healthy hobbies, various safe and high-quality route information is needed. I've looked at many services, but I'm never quite satisfied with them being paid...
-If information is collected from hiking users, it should all be free.
+
+### ❤️ Purpose
+Nature belongs to everyone. We believe that high-quality outdoor route information should not be blocked by paywalls. OpenRoutes was built for all friends who love hiking, cycling, and exploring—let information flow freely, and let footprints spread across mountains and rivers.
