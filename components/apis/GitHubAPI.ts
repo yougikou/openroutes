@@ -126,7 +126,7 @@ interface GitHubReleaseAsset {
 
 const fallbackRepoInfo = {
   owner: 'yougikou',
-  repo: 'yougikou.github.io',
+  repo: 'openroutes',
 };
 
 const resolveRepoInfo = () => {
