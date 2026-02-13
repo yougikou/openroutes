@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 import { Appbar, Text, Avatar, Button, Surface, Chip, Divider, useTheme } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import Head from 'expo-router/head';
 import { Image } from 'expo-image';
 import i18n from '../i18n/i18n';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -30,13 +31,39 @@ export default function RouteDetailScreen() {
   if (!routeItem) {
       return (
           <View style={{flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background}}>
+              <Head>
+                <title>Loading... - OpenRoutes</title>
+              </Head>
               <Text>Loading...</Text>
           </View>
       );
   }
 
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": routeItem.title,
+    "description": routeItem.description,
+    "author": {
+        "@type": "Person",
+        "name": routeItem.user.login
+    },
+    "image": routeItem.coverimg?.uri
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <Head>
+        <title>{routeItem.title} - OpenRoutes</title>
+        <meta name="description" content={routeItem.description || `Route shared by ${routeItem.user.login}`} />
+        <meta property="og:title" content={routeItem.title} />
+        <meta property="og:description" content={routeItem.description || `Route shared by ${routeItem.user.login}`} />
+        {routeItem.coverimg?.uri && <meta property="og:image" content={routeItem.coverimg.uri} />}
+        <meta property="og:type" content="article" />
+        <script type="application/ld+json">
+          {JSON.stringify(structuredData)}
+        </script>
+      </Head>
       <Appbar.Header elevated>
         <Appbar.BackAction onPress={() => router.back()} />
         <Appbar.Content title={i18n.t('home_detail')} />
@@ -53,7 +80,7 @@ export default function RouteDetailScreen() {
          )}
 
          <View style={{ padding: 16, maxWidth: 800, alignSelf: 'center', width: '100%' }}>
-            <Text variant="headlineMedium" style={{ fontWeight: 'bold', marginBottom: 8 }}>{routeItem.title}</Text>
+            <Text variant="headlineMedium" style={{ fontWeight: 'bold', marginBottom: 8 }} accessibilityRole="header">{routeItem.title}</Text>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
                 <Avatar.Image size={40} source={{ uri: routeItem.user.avatar_url }} style={{ backgroundColor: 'transparent' }} />

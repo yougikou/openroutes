@@ -12,6 +12,10 @@ export default function Root({ children }: PropsWithChildren) {
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+        <meta name="description" content="Serverless route sharing platform for outdoor enthusiasts." />
+        <meta property="og:site_name" content="OpenRoutes" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="theme-color" content="#00BA63" />
 
         {/*
           This link tag is essential for iOS PWA icons.
