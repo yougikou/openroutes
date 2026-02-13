@@ -66,7 +66,7 @@ jobs:
 
           if git show-ref --verify --quiet refs/remotes/origin/assets; then
             echo "Checking out existing assets branch"
-            git checkout assets
+            git checkout --track origin/assets
           else
             echo "Creating orphan assets branch"
             git checkout --orphan assets
