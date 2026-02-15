@@ -264,6 +264,62 @@ export const fetchIssues = async (
   }
 };
 
+export const fetchIssueById = async (issueNumber: number, token?: string | null): Promise<RouteIssue> => {
+  const { owner, repo } = resolveRepoInfo();
+
+  if (!owner || !repo) {
+    throw new Error('GitHub repository information is missing in environment variables.');
+  }
+
+  const url = `https://api.github.com/repos/${owner}/${repo}/issues/${issueNumber}`;
+
+  try {
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers.Authorization = 'token ' + token;
+      headers.Accept = 'application/vnd.github.v3+json';
+    }
+
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      throw new Error('GitHub API responded with status ' + response.status);
+    }
+
+    const issue = (await response.json()) as GitHubIssue;
+    const bodyObj = parseYaml<RouteMetadata>(issue.body);
+
+    return {
+      distance: bodyObj.distance_km,
+      duration: bodyObj.duration_hour,
+      description: bodyObj.description,
+      coverimg: parseAttachFile(bodyObj.coverimg),
+      geojson: parseAttachFile(bodyObj.geojson),
+      comments_url: issue.comments_url,
+      id: issue.id,
+      number: issue.number,
+      title: issue.title,
+      user: issue.user,
+      labels: issue.labels
+        .filter((label) => label.name !== 'route')
+        .map((label) => ({
+          id: label.id,
+          name: label.name,
+          description: label.description,
+        })),
+      state: issue.state,
+      comments: issue.comments,
+      created_at: issue.created_at,
+      updated_at: issue.updated_at,
+      closed_at: issue.closed_at,
+      body: issue.body,
+      reactions: issue.reactions,
+    };
+  } catch (error) {
+    console.error(`Failed to fetch issue #${issueNumber} from GitHub:`, error);
+    throw error;
+  }
+};
+
 export const createIssue = async (routeData: RouteDraft, token: string): Promise<unknown> => {
   const { owner, repo } = resolveRepoInfo();
 
