@@ -102,7 +102,12 @@ jobs:
                     coordinates: data.start_point // [lon, lat]
                   },
                   properties: {
-                    id: issue.number
+                    id: issue.number,
+                    title: data.name || issue.title,
+                    distance_km: data.distance_km,
+                    duration_hour: data.duration_hour,
+                    type: data.type,
+                    difficulty: data.difficulty
                   }
                 };
 
@@ -118,12 +123,6 @@ jobs:
                 console.log(`Error processing issue #${issue.number}: ${e.message}`);
               }
             }
-
-            // Post-processing: Clean up all features to ensure only minimal data is kept
-            // This handles existing features loaded from file that were not updated in this run
-            geojson.features.forEach(f => {
-              f.properties = { id: f.properties.id };
-            });
 
             console.log(`Updated ${updatedCount} features.`);
             fs.writeFileSync(indexFile, JSON.stringify(geojson, null, 2));
