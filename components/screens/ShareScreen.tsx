@@ -12,7 +12,7 @@ import type { FeatureCollection } from 'geojson';
 import i18n from '../i18n/i18n';
 import { createIssue, uploadImgFile, uploadGeoJsonFile } from "../apis/GitHubAPI";
 import { readData } from "../apis/StorageAPI";
-import { extractRecordDate, calculateDistance, calculateDuration, validateAndFixGeoJson } from "../apis/GeoDataAPI";
+import { extractRecordDate, calculateDistance, calculateDuration, validateAndFixGeoJson, getStartEndPoint } from "../apis/GeoDataAPI";
 import Redirector from "../Redirector";
 import { DOMParser } from '@xmldom/xmldom';
 import { downloadFile } from '../../utils/FileHelper';
@@ -33,6 +33,8 @@ type RouteData = {
   imgUri: string | null;
   imgBase64?: string | null;
   geojson: string | null;
+  start_point?: number[] | null;
+  end_point?: number[] | null;
 };
 
 const initialRouteData: RouteData = {
@@ -50,6 +52,8 @@ const initialRouteData: RouteData = {
   imgUri: null,
   imgBase64: null,
   geojson: null,
+  start_point: null,
+  end_point: null,
 };
 
 export default function ShareScreen() {
@@ -120,6 +124,10 @@ export default function ShareScreen() {
 
         const duration = calculateDuration(fixedData);
         updateRouteData('duration_hour', duration > 0 ? duration : null);
+
+        const { start_point, end_point } = getStartEndPoint(fixedData);
+        updateRouteData('start_point', start_point);
+        updateRouteData('end_point', end_point);
 
         updateRouteData('geojsonData', fixedData);
       };
@@ -241,7 +249,13 @@ export default function ShareScreen() {
         geojson: jsonURL,
       }));
 
-      await createIssue({ ...routeData, coverimg: imgURL, geojson: jsonURL }, githubToken);
+      await createIssue({
+        ...routeData,
+        coverimg: imgURL,
+        geojson: jsonURL,
+        start_point: routeData.start_point,
+        end_point: routeData.end_point
+      }, githubToken);
 
       onToggleSnackBar(i18n.t('share_submit_confirmed'));
     } catch (error) {

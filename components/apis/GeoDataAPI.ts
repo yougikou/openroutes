@@ -1,5 +1,5 @@
 import * as turf from '@turf/turf';
-import type { Feature, FeatureCollection, LineString } from 'geojson';
+import type { Feature, FeatureCollection, LineString, MultiLineString } from 'geojson';
 
 type TimedFeature = Feature<LineString, { coordTimes?: string[] }>;
 
@@ -42,6 +42,49 @@ export const calculateDuration = (geojson: FeatureCollection): number => {
   });
 
   return parseFloat(totalTime.toFixed(1));
+};
+
+export const getStartEndPoint = (geojson: FeatureCollection): { start_point: number[] | null, end_point: number[] | null } => {
+  const tracks = geojson.features.filter(
+    (f) => f.geometry?.type === 'LineString' || f.geometry?.type === 'MultiLineString'
+  ) as Feature<LineString | MultiLineString>[];
+
+  if (tracks.length === 0) {
+    return { start_point: null, end_point: null };
+  }
+
+  const firstTrack = tracks[0];
+  const lastTrack = tracks[tracks.length - 1];
+
+  let start: number[] | null = null;
+  let end: number[] | null = null;
+
+  if (firstTrack.geometry.type === 'LineString') {
+    const coords = firstTrack.geometry.coordinates;
+    if (coords.length > 0) {
+      start = coords[0];
+    }
+  } else if (firstTrack.geometry.type === 'MultiLineString') {
+    const coords = firstTrack.geometry.coordinates;
+    if (coords.length > 0 && coords[0].length > 0) {
+      start = coords[0][0];
+    }
+  }
+
+  if (lastTrack.geometry.type === 'LineString') {
+    const coords = lastTrack.geometry.coordinates;
+    if (coords.length > 0) {
+      end = coords[coords.length - 1];
+    }
+  } else if (lastTrack.geometry.type === 'MultiLineString') {
+    const coords = lastTrack.geometry.coordinates;
+    if (coords.length > 0 && coords[coords.length - 1].length > 0) {
+      const lastSegment = coords[coords.length - 1];
+      end = lastSegment[lastSegment.length - 1];
+    }
+  }
+
+  return { start_point: start, end_point: end };
 };
 
 export const validateAndFixGeoJson = (geojson: FeatureCollection): FeatureCollection => {

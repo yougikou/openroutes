@@ -5,6 +5,7 @@ type TranslationDictionary = Record<string, string>;
 export const translations: Record<Locale, TranslationDictionary> = {
   en: {
     bottom_explore: 'Explore',
+    bottom_map_search: 'Map Search',
     bottom_share: 'Share',
     bottom_setting: 'Setting',
     title_explore: 'Browse Routes',
@@ -87,6 +88,7 @@ export const translations: Record<Locale, TranslationDictionary> = {
   },
   zh: {
     bottom_explore: '浏览',
+    bottom_map_search: '地图查找',
     bottom_share: '共享',
     bottom_setting: '设置',
     title_explore: '浏览',
@@ -169,6 +171,7 @@ export const translations: Record<Locale, TranslationDictionary> = {
   },
   ja: {
     bottom_explore: '探す',
+    bottom_map_search: '地図検索',
     bottom_share: '共有',
     bottom_setting: '設定',
     title_explore: 'GPS軌跡ログを探す',
