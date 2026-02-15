@@ -14,11 +14,6 @@
       "properties": {
         "id": 94,
         "title": "吾国山",
-        "end_point": [
-          140.1911039656304,
-          36.33316090955283,
-          136.6
-        ],
         "distance_km": 7,
         "duration_hour": "4"
       }
