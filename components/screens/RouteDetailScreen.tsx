@@ -6,7 +6,7 @@ import Head from 'expo-router/head';
 import { Image } from 'expo-image';
 import i18n from '../i18n/i18n';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { RouteIssue } from '../apis/GitHubAPI';
+import { RouteIssue, fetchIssueById } from '../apis/GitHubAPI';
 
 export default function RouteDetailScreen() {
   const router = useRouter();
@@ -25,8 +25,16 @@ export default function RouteDetailScreen() {
       } catch (e) {
         console.error('Failed to parse item param', e);
       }
+    } else if (params.id) {
+      const idStr = Array.isArray(params.id) ? params.id[0] : params.id;
+      const id = parseInt(idStr, 10);
+      if (!isNaN(id)) {
+        fetchIssueById(id)
+          .then(setRouteItem)
+          .catch((err) => console.error('Failed to fetch issue by ID', err));
+      }
     }
-  }, [params.item]);
+  }, [params.item, params.id]);
 
   if (!routeItem) {
       return (

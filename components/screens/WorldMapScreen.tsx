@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, StyleSheet, Platform, Linking, Alert } from 'react-native';
-import { ActivityIndicator, FAB, Text, useTheme, Button } from 'react-native-paper';
+import { ActivityIndicator, FAB, Text, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
-import { fetchIssues, RouteIssue, uploadGeoJsonFile } from '../apis/GitHubAPI'; // check imports
 import { convertBlobUrlToRawUrl } from '../../utils/url';
 
-// Only import Leaflet modules on Web to avoid Metro bundler issues on Native
-let MapContainer: any, TileLayer: any, GeoJSON: any, CircleMarker: any, Circle: any, Popup: any, Marker: any, useMap: any, L: any;
+// Only import Leaflet modules on Web
+let MapContainer: any, TileLayer: any, Marker: any, Popup: any, useMap: any, L: any;
+let MarkerClusterGroup: any;
 
 interface DeviceOrientationEventiOS extends DeviceOrientationEvent {
   requestPermission?: () => Promise<'granted' | 'denied'>;
@@ -20,13 +20,25 @@ if (Platform.OS === 'web') {
       const ReactLeaflet = require('react-leaflet');
       MapContainer = ReactLeaflet.MapContainer;
       TileLayer = ReactLeaflet.TileLayer;
-      GeoJSON = ReactLeaflet.GeoJSON;
-      CircleMarker = ReactLeaflet.CircleMarker;
-      Circle = ReactLeaflet.Circle;
-      Popup = ReactLeaflet.Popup;
       Marker = ReactLeaflet.Marker;
+      Popup = ReactLeaflet.Popup;
       useMap = ReactLeaflet.useMap;
       L = require('leaflet');
+
+      // Dynamic import for clustering
+      // Note: react-leaflet-cluster exports default
+      const ClusterModule = require('react-leaflet-cluster');
+      MarkerClusterGroup = ClusterModule.default || ClusterModule;
+
+      // Fix for Leaflet default icon issues in Webpack/Expo
+      // This is often needed in React Leaflet setups
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
+        iconUrl: require('leaflet/dist/images/marker-icon.png'),
+        shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
+      });
+
     } catch (e) {
       console.warn("Failed to load Leaflet modules", e);
     }
@@ -38,6 +50,10 @@ const UserLocationMarker = ({ userLocation, heading }: { userLocation: Location.
   const accuracyCircleRef = React.useRef<any>(null);
   const headingMarkerRef = React.useRef<any>(null);
   const requestRef = React.useRef<number>();
+
+  // Lazy load Circle and CircleMarker only when rendering to avoid early access errors
+  const Circle = require('react-leaflet').Circle;
+  const CircleMarker = require('react-leaflet').CircleMarker;
 
   useEffect(() => {
     if (!userLocation) return;
@@ -158,25 +174,45 @@ const UserLocationMarker = ({ userLocation, heading }: { userLocation: Location.
   );
 };
 
+const FlyToLocation = ({ location, setHasFlown }: { location: Location.LocationObject, setHasFlown: (v: boolean) => void }) => {
+    const map = useMap();
+    useEffect(() => {
+        if (location) {
+            map.flyTo([location.coords.latitude, location.coords.longitude], 13);
+            setHasFlown(true);
+        }
+    }, [location, map, setHasFlown]);
+    return null;
+};
+
 const WorldMapScreen: React.FC = () => {
   const theme = useTheme();
   const router = useRouter();
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
   const [heading, setHeading] = useState<number | null>(null);
-  const [routes, setRoutes] = useState<{ id: number; title: string; geoJson: any }[]>([]);
-  const [loadingRoutes, setLoadingRoutes] = useState(false);
+  const [geoData, setGeoData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   const [mapInstance, setMapInstance] = useState<any>(null);
+  const [hasFlownToUser, setHasFlownToUser] = useState(false);
 
-  // Inject Leaflet CSS
+  // Inject Leaflet CSS and MarkerCluster CSS
   useEffect(() => {
     if (Platform.OS === 'web') {
-      if (!document.querySelector('#leaflet-css')) {
-        const link = document.createElement('link');
-        link.id = 'leaflet-css';
-        link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        document.head.appendChild(link);
-      }
+      const cssUrls = [
+          'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+          // Marker Cluster CSS (Default theme)
+          'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css',
+          'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css'
+      ];
+
+      cssUrls.forEach(url => {
+          if (!document.querySelector(`link[href="${url}"]`)) {
+              const link = document.createElement('link');
+              link.rel = 'stylesheet';
+              link.href = url;
+              document.head.appendChild(link);
+          }
+      });
     }
   }, []);
 
@@ -281,56 +317,43 @@ const WorldMapScreen: React.FC = () => {
     }
   };
 
-  const loadRoutes = async () => {
-    if (loadingRoutes) return;
-    setLoadingRoutes(true);
+  const loadRoutesIndex = async () => {
+    if (loading) return;
+    setLoading(true);
     try {
-      const issues = await fetchIssues(1, 20); // Fetch top 20 routes
-      const loadedRoutes: any[] = [];
+      // Construct URL for assets/routes-index.geojson
+      // Default fallback
+      const owner = process.env.EXPO_PUBLIC_GITHUB_OWNER || 'yougikou';
+      const repo = process.env.EXPO_PUBLIC_GITHUB_REPO || 'openroutes';
+      const url = `https://raw.githubusercontent.com/${owner}/${repo}/assets/routes-index.geojson`;
 
-      // Parallel fetch for GeoJSONs
-      await Promise.all(issues.map(async (issue) => {
-        if (issue.geojson?.uri) {
-           try {
-             const rawUrl = convertBlobUrlToRawUrl(issue.geojson.uri);
-             const res = await fetch(rawUrl);
-             if (res.ok) {
-                const geoJson = await res.json();
-                loadedRoutes.push({
-                   id: issue.id,
-                   title: issue.title,
-                   geoJson: geoJson
-                });
-             }
-           } catch (e) {
-             console.warn('Failed to fetch GeoJSON for issue ' + issue.id);
-           }
-        }
-      }));
-      setRoutes(loadedRoutes);
-
-      // Fit bounds if routes found
-      if (loadedRoutes.length > 0 && mapInstance && L) {
-         try {
-           const group = L.featureGroup(loadedRoutes.map(r => L.geoJSON(r.geoJson)));
-           mapInstance.fitBounds(group.getBounds(), { padding: [50, 50] });
-         } catch (e) {
-           console.warn("Bounds error", e);
-         }
+      const res = await fetch(url);
+      if (res.ok) {
+          const data = await res.json();
+          setGeoData(data);
+      } else {
+          console.warn('Failed to fetch routes-index.geojson', res.status);
       }
 
     } catch (error) {
-      console.error('Failed to load routes:', error);
-      if (Platform.OS === 'web') window.alert('Failed to load routes');
+      console.error('Failed to load routes index:', error);
+      if (Platform.OS === 'web') window.alert('Failed to load routes index');
     } finally {
-      setLoadingRoutes(false);
+      setLoading(false);
     }
   };
 
   // Initial Load
   useEffect(() => {
-    loadRoutes();
+    loadRoutesIndex();
   }, []);
+
+  const handleMarkerClick = (id: number) => {
+      router.push({
+          pathname: '/app/detail',
+          params: { id: id.toString() }
+      });
+  };
 
   if (Platform.OS !== 'web') {
     return (
@@ -340,7 +363,7 @@ const WorldMapScreen: React.FC = () => {
     );
   }
 
-  if (Platform.OS === 'web' && (!MapContainer || !TileLayer)) {
+  if (Platform.OS === 'web' && (!MapContainer || !TileLayer || !MarkerClusterGroup)) {
     return (
       <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
         <ActivityIndicator size="large" />
@@ -348,31 +371,52 @@ const WorldMapScreen: React.FC = () => {
     );
   }
 
+  // Tokyo as default center if no user location yet
+  const defaultCenter = [35.6895, 139.6917];
+
   return (
     <View style={styles.container}>
        <View style={styles.mapContainer}>
           <MapContainer
-            center={[0, 0]}
-            zoom={2}
+            center={defaultCenter}
+            zoom={5}
             style={{ width: '100%', height: '100%' }}
             zoomControl={false}
             ref={setMapInstance}
+            maxZoom={18}
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
-            {routes.map(route => (
-               <GeoJSON
-                  key={route.id}
-                  data={route.geoJson}
-                  style={{ color: theme.colors.primary, weight: 3, opacity: 0.7 }}
-                  onEachFeature={(feature: any, layer: any) => {
-                    layer.bindPopup(route.title);
-                  }}
-               />
-            ))}
+            {/* Auto-center on user location once found (only once) */}
+            {!hasFlownToUser && userLocation && <FlyToLocation location={userLocation} setHasFlown={setHasFlownToUser} />}
+
+            {geoData && (
+                <MarkerClusterGroup chunkedLoading>
+                    {geoData.features.map((feature: any, index: number) => {
+                        const [lng, lat] = feature.geometry.coordinates;
+                        const { id, title } = feature.properties;
+                        return (
+                            <Marker
+                                key={id || index}
+                                position={[lat, lng]}
+                                eventHandlers={{
+                                    click: () => handleMarkerClick(id)
+                                }}
+                            >
+                                <Popup>
+                                    <View>
+                                        <Text style={{fontWeight: 'bold'}}>{title || `Route #${id}`}</Text>
+                                        <Text style={{color: theme.colors.primary, marginTop: 4}}>Click to view details</Text>
+                                    </View>
+                                </Popup>
+                            </Marker>
+                        );
+                    })}
+                </MarkerClusterGroup>
+            )}
 
             {userLocation && <UserLocationMarker userLocation={userLocation} heading={heading} />}
           </MapContainer>
@@ -388,10 +432,10 @@ const WorldMapScreen: React.FC = () => {
 
        <FAB
          icon="refresh"
-         label={loadingRoutes ? "Loading..." : "Reload"}
+         label={loading ? "Loading..." : "Reload"}
          style={[styles.reloadFab, { backgroundColor: theme.colors.surface }]}
-         onPress={loadRoutes}
-         loading={loadingRoutes}
+         onPress={loadRoutesIndex}
+         loading={loading}
          size="small"
        />
     </View>
