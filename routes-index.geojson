@@ -1,4 +1,27 @@
 {
   "type": "FeatureCollection",
-  "features": []
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          140.1864297882263,
+          36.35149808241677,
+          47.1
+        ]
+      },
+      "properties": {
+        "id": 94,
+        "title": "吾国山",
+        "end_point": [
+          140.1911039656304,
+          36.33316090955283,
+          136.6
+        ],
+        "distance_km": 7,
+        "duration_hour": "4"
+      }
+    }
+  ]
 }
