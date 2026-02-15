@@ -1,0 +1,145 @@
+name: Generate Routes Index
+
+on:
+  schedule:
+    - cron: '0 18 * * *' # 3:00 JST (18:00 UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: read
+
+jobs:
+  generate-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout assets branch
+        uses: actions/checkout@v4
+        with:
+          ref: assets
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: npm install js-yaml
+
+      - name: Process Routes Index
+        uses: actions/github-script@v7
+        id: process
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const yaml = require('js-yaml');
+
+            const indexFile = 'routes-index.geojson';
+            const eventName = process.env.EVENT_NAME;
+
+            // Load existing index or create new
+            let geojson = {
+              type: "FeatureCollection",
+              features: []
+            };
+
+            if (fs.existsSync(indexFile)) {
+              try {
+                geojson = JSON.parse(fs.readFileSync(indexFile, 'utf8'));
+              } catch (e) {
+                console.log("Failed to parse existing index, creating new.");
+              }
+            }
+
+            // Determine scope
+            let since = undefined;
+            if (eventName === 'schedule') {
+              const d = new Date();
+              d.setHours(d.getHours() - 24);
+              since = d.toISOString();
+              console.log(`Scheduled run: fetching issues updated since ${since}`);
+            } else {
+              console.log(`Manual run: fetching ALL open route issues.`);
+              // Reset features for full rebuild
+              geojson.features = [];
+            }
+
+            // Fetch issues
+            const opts = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'route',
+              per_page: 100,
+            };
+            if (since) {
+              opts.since = since;
+            }
+
+            // Paginate through issues
+            const issues = await github.paginate(github.rest.issues.listForRepo, opts);
+            console.log(`Found ${issues.length} issues.`);
+
+            let updatedCount = 0;
+
+            for (const issue of issues) {
+              if (!issue.body) continue;
+
+              try {
+                // Parse YAML frontmatter/body
+                // The body is just YAML dump in this project structure
+                const data = yaml.load(issue.body);
+
+                if (!data || !data.start_point) {
+                  console.log(`Issue #${issue.number} missing start_point.`);
+                  continue;
+                }
+
+                // GeoJSON Feature
+                const feature = {
+                  type: "Feature",
+                  geometry: {
+                    type: "Point",
+                    coordinates: data.start_point // [lon, lat]
+                  },
+                  properties: {
+                    id: issue.number,
+                    title: data.name || issue.title,
+                    end_point: data.end_point || null,
+                    distance_km: data.distance_km,
+                    duration_hour: data.duration_hour,
+                    type: data.type,
+                    difficulty: data.difficulty
+                  }
+                };
+
+                // Upsert logic
+                const existingIndex = geojson.features.findIndex(f => f.properties.id === issue.number);
+                if (existingIndex >= 0) {
+                  geojson.features[existingIndex] = feature;
+                } else {
+                  geojson.features.push(feature);
+                }
+                updatedCount++;
+              } catch (e) {
+                console.log(`Error processing issue #${issue.number}: ${e.message}`);
+              }
+            }
+
+            console.log(`Updated ${updatedCount} features.`);
+            fs.writeFileSync(indexFile, JSON.stringify(geojson, null, 2));
+
+            // Only commit if changes exist
+            // We'll handle git in next step, but here we ensure file is written.
+
+      - name: Commit and Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [[ `git status --porcelain` ]]; then
+            git add routes-index.geojson
+            git commit -m "Update routes-index.geojson [skip ci]"
+            git push origin assets
+          else
+            echo "No changes to commit."
+          fi

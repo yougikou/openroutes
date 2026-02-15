@@ -87,6 +87,8 @@ export interface RouteDraft {
   description: string | null;
   coverimg: string | null;
   geojson: string;
+  start_point?: number[] | null;
+  end_point?: number[] | null;
 }
 
 export interface RouteFilters {
@@ -290,6 +292,8 @@ export const createIssue = async (routeData: RouteDraft, token: string): Promise
       description: routeData.description ?? '',
       coverimg: coverImageMarkdown,
       geojson: geojsonMarkdown,
+      start_point: routeData.start_point,
+      end_point: routeData.end_point,
     }, { lineWidth: -1, forceQuotes: true }),
     labels: [routeData.type, routeData.difficulty, 'route'],
   };
@@ -307,6 +311,21 @@ export const createIssue = async (routeData: RouteDraft, token: string): Promise
 
   const resJson = await response.json();
   return resJson;
+};
+
+export const fetchUser = async (token: string): Promise<IssueUser> => {
+  const response = await fetch('https://api.github.com/user', {
+    headers: {
+      Authorization: 'token ' + token,
+      Accept: 'application/vnd.github.v3+json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch user profile: ' + response.status);
+  }
+
+  return (await response.json()) as IssueUser;
 };
 
 export const exchangeToken = async (code: string): Promise<void> => {
