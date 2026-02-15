@@ -87,6 +87,8 @@ export interface RouteDraft {
   description: string | null;
   coverimg: string | null;
   geojson: string;
+  start_point?: number[] | null;
+  end_point?: number[] | null;
 }
 
 export interface RouteFilters {
@@ -290,6 +292,8 @@ export const createIssue = async (routeData: RouteDraft, token: string): Promise
       description: routeData.description ?? '',
       coverimg: coverImageMarkdown,
       geojson: geojsonMarkdown,
+      start_point: routeData.start_point,
+      end_point: routeData.end_point,
     }, { lineWidth: -1, forceQuotes: true }),
     labels: [routeData.type, routeData.difficulty, 'route'],
   };
