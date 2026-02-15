@@ -309,6 +309,21 @@ export const createIssue = async (routeData: RouteDraft, token: string): Promise
   return resJson;
 };
 
+export const fetchUser = async (token: string): Promise<IssueUser> => {
+  const response = await fetch('https://api.github.com/user', {
+    headers: {
+      Authorization: 'token ' + token,
+      Accept: 'application/vnd.github.v3+json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch user profile: ' + response.status);
+  }
+
+  return (await response.json()) as IssueUser;
+};
+
 export const exchangeToken = async (code: string): Promise<void> => {
   const workerUrl = 'https://github-auth-worker.yougikou.workers.dev/exchange-token';
 
