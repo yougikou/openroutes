@@ -167,8 +167,8 @@ const UserLocationMarker = ({ userLocation, heading, visible }: { userLocation: 
       <CircleMarker
         ref={markerRef}
         center={[userLocation.coords.latitude, userLocation.coords.longitude]}
-        radius={8}
-        pathOptions={{ color: 'white', fillColor: '#4285F4', fillOpacity: 1, weight: 2 }}
+        radius={6}
+        pathOptions={{ color: 'white', fillColor: '#4285F4', fillOpacity: 1, weight: 3 }}
       >
         <Popup>You are here</Popup>
       </CircleMarker>
