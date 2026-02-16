@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { Surface, Text, Button, IconButton, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -23,6 +23,7 @@ interface MapRouteCardProps {
 export default function MapRouteCard({ routes, onClose }: MapRouteCardProps) {
   const theme = useTheme();
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const [index, setIndex] = useState(0);
 
   // Reset index when routes change
@@ -33,6 +34,14 @@ export default function MapRouteCard({ routes, onClose }: MapRouteCardProps) {
   if (!routes || routes.length === 0) return null;
 
   const current = routes[index];
+
+  // Adjust layout for small screens to avoid overlapping FABs
+  const isSmallScreen = width < 768;
+  const containerStyle = {
+    right: isSmallScreen ? 80 : 16,
+    width: isSmallScreen ? 'auto' : (Platform.OS === 'web' ? '90%' : 'auto'),
+    alignSelf: (isSmallScreen ? 'auto' : 'center') as 'auto' | 'center',
+  };
 
   const handleNext = () => setIndex((prev) => (prev + 1) % routes.length);
   const handlePrev = () => setIndex((prev) => (prev - 1 + routes.length) % routes.length);
@@ -45,7 +54,7 @@ export default function MapRouteCard({ routes, onClose }: MapRouteCardProps) {
   };
 
   return (
-    <Surface style={[styles.container, { backgroundColor: theme.colors.surface }]} elevation={4}>
+    <Surface style={[styles.container, containerStyle, { backgroundColor: theme.colors.surface }]} elevation={4}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleContainer}>
@@ -110,13 +119,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     left: 16,
-    right: 16,
     borderRadius: 16,
     padding: 16,
     zIndex: 2000, // Above FAB and Map
     maxWidth: 600, // Limit width on large screens
-    alignSelf: 'center', // Center horizontally if maxWidth applies
-    width: Platform.OS === 'web' ? '90%' : 'auto',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
