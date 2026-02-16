@@ -135,8 +135,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if [[ `git status --porcelain` ]]; then
-            git add routes-index.geojson
+          git add routes-index.geojson
+          if ! git diff --staged --quiet; then
             git commit -m "Update routes-index.geojson [skip ci]"
             git push origin assets
           else
