@@ -1,196 +1,261 @@
-import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { Chip, Menu, useTheme } from 'react-native-paper';
-
-export interface FilterState {
-  type: string | null;
-  difficulty: string | null;
-  distance: string | null;
-  time: string | null;
-}
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, Text, useWindowDimensions } from 'react-native';
+import { Chip, IconButton, useTheme, FAB } from 'react-native-paper';
+import Slider from '@react-native-community/slider';
+import { FilterState } from '../utils/filterUtils';
 
 interface MapFilterBarProps {
-  geoData: any;
+  minDistance: number;
+  maxDistance: number;
+  minTime: number;
+  maxTime: number;
   onFilterChange: (filters: FilterState) => void;
 }
 
-const DISTANCE_OPTIONS = [
-  { label: '< 5 km', value: '0-5' },
-  { label: '5 - 10 km', value: '5-10' },
-  { label: '10 - 20 km', value: '10-20' },
-  { label: '> 20 km', value: '20+' },
-];
-
-const TIME_OPTIONS = [
-  { label: '< 1 h', value: '0-1' },
-  { label: '1 - 3 h', value: '1-3' },
-  { label: '3 - 5 h', value: '3-5' },
-  { label: '> 5 h', value: '5+' },
-];
-
-export default function MapFilterBar({ geoData, onFilterChange }: MapFilterBarProps) {
+export default function MapFilterBar({
+  minDistance,
+  maxDistance,
+  minTime,
+  maxTime,
+  onFilterChange,
+}: MapFilterBarProps) {
   const theme = useTheme();
-  const [filters, setFilters] = useState<FilterState>({
-    type: null,
-    difficulty: null,
-    distance: null,
-    time: null,
-  });
+  const { width } = useWindowDimensions();
+  const [isVisible, setIsVisible] = useState(false);
 
-  const [menuVisible, setMenuVisible] = useState<{ [key: string]: boolean }>({
-    type: false,
-    difficulty: false,
-    distance: false,
-    time: false,
-  });
+  // Filters State
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
+  const [selectedDifficulties, setSelectedDifficulties] = useState<Set<string>>(new Set());
 
-  // Extract unique types and difficulties
-  const { types, difficulties } = useMemo(() => {
-    const typesSet = new Set<string>();
-    const difficultiesSet = new Set<string>();
+  // Initialize ranges with props
+  const [distanceRange, setDistanceRange] = useState<{ min: number; max: number }>({ min: minDistance, max: maxDistance });
+  const [timeRange, setTimeRange] = useState<{ min: number; max: number }>({ min: minTime, max: maxTime });
 
-    if (geoData && geoData.features) {
-      geoData.features.forEach((f: any) => {
-        if (f.properties.type) typesSet.add(f.properties.type);
-        if (f.properties.difficulty) difficultiesSet.add(f.properties.difficulty);
-      });
-    }
+  // Update internal state when data loads
+  useEffect(() => {
+      if (maxDistance > 0 && distanceRange.max === 0) {
+          setDistanceRange({ min: minDistance, max: maxDistance });
+      }
+      if (maxTime > 0 && timeRange.max === 0) {
+          setTimeRange({ min: minTime, max: maxTime });
+      }
+  }, [minDistance, maxDistance, minTime, maxTime]);
 
-    return {
-      types: Array.from(typesSet).sort(),
-      difficulties: Array.from(difficultiesSet).sort(),
-    };
-  }, [geoData]);
+  // Notify parent
+  useEffect(() => {
+    onFilterChange({
+      types: selectedTypes,
+      difficulties: selectedDifficulties,
+      distance: distanceRange,
+      time: timeRange,
+    });
+  }, [selectedTypes, selectedDifficulties, distanceRange, timeRange]);
 
-  const updateFilter = (key: keyof FilterState, value: string | null) => {
-    const newFilters = { ...filters, [key]: value };
-    setFilters(newFilters);
-    onFilterChange(newFilters);
-    setMenuVisible({ ...menuVisible, [key]: false });
+  const toggleType = (type: string) => {
+    const newSet = new Set(selectedTypes);
+    if (newSet.has(type)) newSet.delete(type);
+    else newSet.add(type);
+    setSelectedTypes(newSet);
   };
 
-  const openMenu = (key: string) => setMenuVisible({ ...menuVisible, [key]: true });
-  const closeMenu = (key: string) => setMenuVisible({ ...menuVisible, [key]: false });
-
-  const getLabel = (key: keyof FilterState, options: { label: string, value: string }[] = []) => {
-    const val = filters[key];
-    if (!val) return 'All';
-    const opt = options.find(o => o.value === val);
-    return opt ? opt.label : val;
+  const toggleDifficulty = (diff: string) => {
+    const newSet = new Set(selectedDifficulties);
+    if (newSet.has(diff)) newSet.delete(diff);
+    else newSet.add(diff);
+    setSelectedDifficulties(newSet);
   };
+
+  const renderTypeButton = (type: string, icon: string) => {
+    const isSelected = selectedTypes.has(type);
+    return (
+      <IconButton
+        key={type}
+        icon={icon}
+        mode={isSelected ? 'contained' : 'outlined'}
+        selected={isSelected}
+        onPress={() => toggleType(type)}
+        style={styles.iconBtn}
+        iconColor={isSelected ? theme.colors.onPrimary : theme.colors.primary}
+        containerColor={isSelected ? theme.colors.primary : undefined}
+      />
+    );
+  };
+
+  if (!isVisible) {
+    return (
+      <FAB
+        icon="filter"
+        style={[styles.fab, { backgroundColor: theme.colors.surface }]}
+        onPress={() => setIsVisible(true)}
+        size="small"
+      />
+    );
+  }
+
+  // Calculate generic width for container
+  const containerWidth = Math.min(300, width - 20);
 
   return (
-    <View style={styles.container}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+    <View style={[styles.container, { width: containerWidth, backgroundColor: theme.colors.surface, borderColor: theme.colors.outline }]}>
+        <View style={styles.header}>
+            <Text style={[styles.title, { color: theme.colors.onSurface }]}>Filters</Text>
+            <IconButton icon="close" size={20} onPress={() => setIsVisible(false)} />
+        </View>
 
-        {/* Type Filter */}
-        <Menu
-          visible={menuVisible.type}
-          onDismiss={() => closeMenu('type')}
-          anchor={
-            <Chip
-              mode="outlined"
-              selected={!!filters.type}
-              onPress={() => openMenu('type')}
-              style={styles.chip}
-              showSelectedOverlay
-            >
-              Type: {filters.type || 'All'}
-            </Chip>
-          }
-        >
-          <Menu.Item onPress={() => updateFilter('type', null)} title="All" />
-          {types.map(t => (
-            <Menu.Item key={t} onPress={() => updateFilter('type', t)} title={t} />
-          ))}
-        </Menu>
+        <ScrollView style={styles.content}>
+            {/* Type Section */}
+            <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>Type</Text>
+            <View style={styles.row}>
+                {renderTypeButton('hiking', 'hiking')}
+                {renderTypeButton('cycling', 'bike')}
+                {renderTypeButton('walking', 'walk')}
+            </View>
 
-        {/* Difficulty Filter */}
-        <Menu
-          visible={menuVisible.difficulty}
-          onDismiss={() => closeMenu('difficulty')}
-          anchor={
-            <Chip
-              mode="outlined"
-              selected={!!filters.difficulty}
-              onPress={() => openMenu('difficulty')}
-              style={styles.chip}
-              showSelectedOverlay
-            >
-              Difficulty: {filters.difficulty || 'All'}
-            </Chip>
-          }
-        >
-          <Menu.Item onPress={() => updateFilter('difficulty', null)} title="All" />
-          {difficulties.map(d => (
-            <Menu.Item key={d} onPress={() => updateFilter('difficulty', d)} title={d} />
-          ))}
-        </Menu>
+            {/* Difficulty Section */}
+            <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>Difficulty</Text>
+            <View style={styles.rowWrap}>
+                {['easy', 'normal', 'moderate', 'hard'].map((d) => (
+                    <Chip
+                        key={d}
+                        selected={selectedDifficulties.has(d)}
+                        onPress={() => toggleDifficulty(d)}
+                        style={styles.chip}
+                        showSelectedOverlay
+                    >
+                        {d}
+                    </Chip>
+                ))}
+            </View>
 
-        {/* Distance Filter */}
-        <Menu
-          visible={menuVisible.distance}
-          onDismiss={() => closeMenu('distance')}
-          anchor={
-            <Chip
-              mode="outlined"
-              selected={!!filters.distance}
-              onPress={() => openMenu('distance')}
-              style={styles.chip}
-              showSelectedOverlay
-            >
-              Distance: {getLabel('distance', DISTANCE_OPTIONS)}
-            </Chip>
-          }
-        >
-          <Menu.Item onPress={() => updateFilter('distance', null)} title="All" />
-          {DISTANCE_OPTIONS.map(opt => (
-            <Menu.Item key={opt.value} onPress={() => updateFilter('distance', opt.value)} title={opt.label} />
-          ))}
-        </Menu>
+            {/* Distance Slider */}
+            <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>
+                Distance: {distanceRange.min.toFixed(1)} - {distanceRange.max.toFixed(1)} km
+            </Text>
+            <View style={styles.sliderContainer}>
+                <Text style={styles.sliderLabel}>Min</Text>
+                <Slider
+                    style={{ flex: 1, height: 40 }}
+                    minimumValue={minDistance}
+                    maximumValue={maxDistance}
+                    step={0.1}
+                    value={distanceRange.min}
+                    onValueChange={(val) => setDistanceRange(prev => ({ ...prev, min: Math.min(val, prev.max) }))}
+                    minimumTrackTintColor={theme.colors.primary}
+                    maximumTrackTintColor={theme.colors.outline}
+                    thumbTintColor={theme.colors.primary}
+                />
+            </View>
+            <View style={styles.sliderContainer}>
+                <Text style={styles.sliderLabel}>Max</Text>
+                <Slider
+                    style={{ flex: 1, height: 40 }}
+                    minimumValue={minDistance}
+                    maximumValue={maxDistance}
+                    step={0.1}
+                    value={distanceRange.max}
+                    onValueChange={(val) => setDistanceRange(prev => ({ ...prev, max: Math.max(val, prev.min) }))}
+                    minimumTrackTintColor={theme.colors.primary}
+                    maximumTrackTintColor={theme.colors.outline}
+                    thumbTintColor={theme.colors.primary}
+                />
+            </View>
 
-        {/* Time Filter */}
-        <Menu
-          visible={menuVisible.time}
-          onDismiss={() => closeMenu('time')}
-          anchor={
-            <Chip
-              mode="outlined"
-              selected={!!filters.time}
-              onPress={() => openMenu('time')}
-              style={styles.chip}
-              showSelectedOverlay
-            >
-              Time: {getLabel('time', TIME_OPTIONS)}
-            </Chip>
-          }
-        >
-          <Menu.Item onPress={() => updateFilter('time', null)} title="All" />
-          {TIME_OPTIONS.map(opt => (
-            <Menu.Item key={opt.value} onPress={() => updateFilter('time', opt.value)} title={opt.label} />
-          ))}
-        </Menu>
-
-      </ScrollView>
+            {/* Time Slider */}
+            <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>
+                Time: {timeRange.min.toFixed(1)} - {timeRange.max.toFixed(1)} h
+            </Text>
+            <View style={styles.sliderContainer}>
+                <Text style={styles.sliderLabel}>Min</Text>
+                <Slider
+                    style={{ flex: 1, height: 40 }}
+                    minimumValue={minTime}
+                    maximumValue={maxTime}
+                    step={0.1}
+                    value={timeRange.min}
+                    onValueChange={(val) => setTimeRange(prev => ({ ...prev, min: Math.min(val, prev.max) }))}
+                    minimumTrackTintColor={theme.colors.primary}
+                    maximumTrackTintColor={theme.colors.outline}
+                    thumbTintColor={theme.colors.primary}
+                />
+            </View>
+            <View style={styles.sliderContainer}>
+                <Text style={styles.sliderLabel}>Max</Text>
+                <Slider
+                    style={{ flex: 1, height: 40 }}
+                    minimumValue={minTime}
+                    maximumValue={maxTime}
+                    step={0.1}
+                    value={timeRange.max}
+                    onValueChange={(val) => setTimeRange(prev => ({ ...prev, max: Math.max(val, prev.min) }))}
+                    minimumTrackTintColor={theme.colors.primary}
+                    maximumTrackTintColor={theme.colors.outline}
+                    thumbTintColor={theme.colors.primary}
+                />
+            </View>
+             <View style={{ height: 20 }} />
+        </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  fab: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    zIndex: 2000,
+  },
   container: {
     position: 'absolute',
     top: 10,
-    left: 0,
-    right: 0,
+    left: 10,
+    maxHeight: '80%',
+    borderRadius: 8,
+    borderWidth: 1,
     zIndex: 2000,
-    paddingHorizontal: 10,
+    elevation: 4,
   },
-  scrollContent: {
-    paddingRight: 20,
-    paddingBottom: 10, // Shadow space
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#ccc',
+  },
+  title: {
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  content: {
+    padding: 10,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  rowWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  iconBtn: {
+    margin: 0,
   },
   chip: {
-    marginRight: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-  }
+    margin: 4,
+  },
+  sliderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sliderLabel: {
+    width: 30,
+    fontSize: 12,
+  },
 });

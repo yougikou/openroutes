@@ -1,11 +1,12 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { View, StyleSheet, Platform, Linking, Alert } from 'react-native';
 import { ActivityIndicator, FAB, Text, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { convertBlobUrlToRawUrl } from '../../utils/url';
 import MapRouteCard from '../MapRouteCard';
-import MapFilterBar, { FilterState } from '../MapFilterBar';
+import MapFilterBar from '../MapFilterBar';
+import { FilterState, filterRoutes } from '../../utils/filterUtils';
 
 // Only import Leaflet modules on Web
 let MapContainer: any, TileLayer: any, Marker: any, Popup: any, useMap: any, L: any;
@@ -51,7 +52,7 @@ const UserLocationMarker = ({ userLocation, heading, visible }: { userLocation: 
   const markerRef = React.useRef<any>(null);
   const accuracyCircleRef = React.useRef<any>(null);
   const headingMarkerRef = React.useRef<any>(null);
-  const requestRef = React.useRef<number>();
+  const requestRef = React.useRef<number>(0);
 
   // Lazy load Circle and CircleMarker only when rendering to avoid early access errors
   const Circle = require('react-leaflet').Circle;
@@ -211,10 +212,10 @@ const WorldMapScreen: React.FC = () => {
   const [hasFlownToUser, setHasFlownToUser] = useState(false);
   const [selectedRoutes, setSelectedRoutes] = useState<any[]>([]);
   const [filters, setFilters] = useState<FilterState>({
-    type: null,
-    difficulty: null,
-    distance: null,
-    time: null,
+    types: new Set(),
+    difficulties: new Set(),
+    distance: { min: 0, max: 100 },
+    time: { min: 0, max: 10 },
   });
 
   // Inject Leaflet CSS and MarkerCluster CSS
@@ -370,6 +371,29 @@ const WorldMapScreen: React.FC = () => {
     loadRoutesIndex();
   }, []);
 
+  // Calculate Min/Max for Sliders
+  const { minDistance, maxDistance, minTime, maxTime } = useMemo(() => {
+    let minD = 0, maxD = 100, minT = 0, maxT = 10;
+    if (geoData && geoData.features && geoData.features.length > 0) {
+        const distances = geoData.features
+           .map((f: any) => f.properties.distance_km)
+           .filter((v: any) => typeof v === 'number');
+        const times = geoData.features
+           .map((f: any) => f.properties.duration_hour)
+           .filter((v: any) => typeof v === 'number');
+
+        if (distances.length > 0) {
+            minD = Math.floor(Math.min(...distances));
+            maxD = Math.ceil(Math.max(...distances));
+        }
+        if (times.length > 0) {
+            minT = Math.floor(Math.min(...times));
+            maxT = Math.ceil(Math.max(...times));
+        }
+    }
+    return { minDistance: minD, maxDistance: maxD, minTime: minT, maxTime: maxT };
+  }, [geoData]);
+
   const routeMap = React.useMemo(() => {
       if (!geoData) return new Map();
       return new Map(geoData.features.map((f: any) => [f.properties.id.toString(), f.properties]));
@@ -377,30 +401,7 @@ const WorldMapScreen: React.FC = () => {
 
   const filteredRoutes = React.useMemo(() => {
       if (!geoData || !geoData.features) return [];
-      return geoData.features.filter((f: any) => {
-          const p = f.properties;
-          // Type
-          if (filters.type && p.type !== filters.type) return false;
-          // Difficulty
-          if (filters.difficulty && p.difficulty !== filters.difficulty) return false;
-          // Distance
-          if (filters.distance) {
-              const d = p.distance_km || 0;
-              if (filters.distance === '0-5' && d > 5) return false;
-              if (filters.distance === '5-10' && (d <= 5 || d > 10)) return false;
-              if (filters.distance === '10-20' && (d <= 10 || d > 20)) return false;
-              if (filters.distance === '20+' && d <= 20) return false;
-          }
-          // Time
-          if (filters.time) {
-              const t = p.duration_hour || 0;
-              if (filters.time === '0-1' && t > 1) return false;
-              if (filters.time === '1-3' && (t <= 1 || t > 3)) return false;
-              if (filters.time === '3-5' && (t <= 3 || t > 5)) return false;
-              if (filters.time === '5+' && t <= 5) return false;
-          }
-          return true;
-      });
+      return filterRoutes(geoData.features, filters);
   }, [geoData, filters]);
 
   const singleMarkerIcon = React.useMemo(() => {
@@ -497,7 +498,13 @@ const WorldMapScreen: React.FC = () => {
           </MapContainer>
        </View>
 
-       <MapFilterBar geoData={geoData} onFilterChange={setFilters} />
+       <MapFilterBar
+         minDistance={minDistance}
+         maxDistance={maxDistance}
+         minTime={minTime}
+         maxTime={maxTime}
+         onFilterChange={setFilters}
+       />
 
        <FAB
          icon="crosshairs-gps"
