@@ -368,6 +368,16 @@ const WorldMapScreen: React.FC = () => {
       return new Map(geoData.features.map((f: any) => [f.properties.id.toString(), f.properties]));
   }, [geoData]);
 
+  const singleMarkerIcon = React.useMemo(() => {
+    if (!L) return undefined;
+    return L.divIcon({
+      className: 'marker-cluster marker-cluster-small',
+      html: '<div><span>1</span></div>',
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+    });
+  }, []);
+
   const handleMarkerClick = (id: number) => {
       const route = routeMap.get(id.toString());
       if (route) {
@@ -437,6 +447,7 @@ const WorldMapScreen: React.FC = () => {
                                 key={id || index}
                                 position={[lat, lng]}
                                 title={id.toString()}
+                                icon={singleMarkerIcon}
                                 eventHandlers={{
                                     click: () => handleMarkerClick(id)
                                 }}
