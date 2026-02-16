@@ -4,6 +4,7 @@ import { ActivityIndicator, FAB, Text, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { convertBlobUrlToRawUrl } from '../../utils/url';
+import MapRouteCard from '../MapRouteCard';
 
 // Only import Leaflet modules on Web
 let MapContainer: any, TileLayer: any, Marker: any, Popup: any, useMap: any, L: any;
@@ -45,7 +46,7 @@ if (Platform.OS === 'web') {
   }
 }
 
-const UserLocationMarker = ({ userLocation, heading }: { userLocation: Location.LocationObject, heading?: number | null }) => {
+const UserLocationMarker = ({ userLocation, heading, visible }: { userLocation: Location.LocationObject, heading?: number | null, visible: boolean }) => {
   const markerRef = React.useRef<any>(null);
   const accuracyCircleRef = React.useRef<any>(null);
   const headingMarkerRef = React.useRef<any>(null);
@@ -144,7 +145,7 @@ const UserLocationMarker = ({ userLocation, heading }: { userLocation: Location.
      });
   }, []);
 
-  if (!userLocation) return null;
+  if (!userLocation || !visible) return null;
 
   return (
     <>
@@ -174,11 +175,24 @@ const UserLocationMarker = ({ userLocation, heading }: { userLocation: Location.
   );
 };
 
-const FlyToLocation = ({ location, setHasFlown }: { location: Location.LocationObject, setHasFlown: (v: boolean) => void }) => {
+const InitialMapFocus = ({ location, setHasFlown }: { location: Location.LocationObject, setHasFlown: (v: boolean) => void }) => {
     const map = useMap();
     useEffect(() => {
         if (location) {
-            map.flyTo([location.coords.latitude, location.coords.longitude], 13);
+            // Calculate bounds for ~100km radius (approx +/- 0.9 deg lat)
+            const lat = location.coords.latitude;
+            const lng = location.coords.longitude;
+            const latDelta = 0.9;
+            // Longitude delta depends on latitude: delta = 0.9 / cos(lat)
+            // Use Math.max to avoid division by zero or extreme values
+            const lngDelta = 0.9 / Math.max(0.1, Math.cos(lat * (Math.PI / 180)));
+
+            const bounds = [
+                [lat - latDelta, lng - lngDelta],
+                [lat + latDelta, lng + lngDelta]
+            ];
+
+            map.fitBounds(bounds as any);
             setHasFlown(true);
         }
     }, [location, map, setHasFlown]);
@@ -194,6 +208,7 @@ const WorldMapScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [mapInstance, setMapInstance] = useState<any>(null);
   const [hasFlownToUser, setHasFlownToUser] = useState(false);
+  const [selectedRoutes, setSelectedRoutes] = useState<any[]>([]);
 
   // Inject Leaflet CSS and MarkerCluster CSS
   useEffect(() => {
@@ -348,11 +363,26 @@ const WorldMapScreen: React.FC = () => {
     loadRoutesIndex();
   }, []);
 
+  const routeMap = React.useMemo(() => {
+      if (!geoData) return new Map();
+      return new Map(geoData.features.map((f: any) => [f.properties.id.toString(), f.properties]));
+  }, [geoData]);
+
   const handleMarkerClick = (id: number) => {
-      router.push({
-          pathname: '/app/detail',
-          params: { id: id.toString() }
-      });
+      const route = routeMap.get(id.toString());
+      if (route) {
+          setSelectedRoutes([route]);
+      }
+  };
+
+  const handleClusterClick = (event: any) => {
+      const markers = event.layer.getAllChildMarkers();
+      const ids = markers.map((m: any) => m.options.title);
+      const routes = ids.map((id: string) => routeMap.get(id)).filter(Boolean);
+
+      if (routes.length > 0) {
+          setSelectedRoutes(routes);
+      }
   };
 
   if (Platform.OS !== 'web') {
@@ -391,10 +421,14 @@ const WorldMapScreen: React.FC = () => {
             />
 
             {/* Auto-center on user location once found (only once) */}
-            {!hasFlownToUser && userLocation && <FlyToLocation location={userLocation} setHasFlown={setHasFlownToUser} />}
+            {!hasFlownToUser && userLocation && <InitialMapFocus location={userLocation} setHasFlown={setHasFlownToUser} />}
 
             {geoData && (
-                <MarkerClusterGroup chunkedLoading>
+                <MarkerClusterGroup
+                    chunkedLoading
+                    zoomToBoundsOnClick={false}
+                    eventHandlers={{ clusterclick: handleClusterClick }}
+                >
                     {geoData.features.map((feature: any, index: number) => {
                         const [lng, lat] = feature.geometry.coordinates;
                         const { id, title } = feature.properties;
@@ -402,23 +436,18 @@ const WorldMapScreen: React.FC = () => {
                             <Marker
                                 key={id || index}
                                 position={[lat, lng]}
+                                title={id.toString()}
                                 eventHandlers={{
                                     click: () => handleMarkerClick(id)
                                 }}
                             >
-                                <Popup>
-                                    <View>
-                                        <Text style={{fontWeight: 'bold'}}>{title || `Route #${id}`}</Text>
-                                        <Text style={{color: theme.colors.primary, marginTop: 4}}>Click to view details</Text>
-                                    </View>
-                                </Popup>
                             </Marker>
                         );
                     })}
                 </MarkerClusterGroup>
             )}
 
-            {userLocation && <UserLocationMarker userLocation={userLocation} heading={heading} />}
+            {userLocation && <UserLocationMarker userLocation={userLocation} heading={heading} visible={hasFlownToUser} />}
           </MapContainer>
        </View>
 
@@ -438,6 +467,10 @@ const WorldMapScreen: React.FC = () => {
          loading={loading}
          size="small"
        />
+
+       {selectedRoutes.length > 0 && (
+           <MapRouteCard routes={selectedRoutes} onClose={() => setSelectedRoutes([])} />
+       )}
     </View>
   );
 };
