@@ -30,8 +30,11 @@ const RouteCard = memo(({ item, index, shouldAnimate = true, onDetailPress, onGp
 
   const otherLabels = item.labels.filter(l => l.name !== difficultyLabel?.name);
 
+  // Cap animation delay to avoid long waits for items further down the list
+  const animationDelay = (index % 12) * 50;
+
   return (
-    <Animated.View entering={shouldAnimate ? FadeInDown.delay(index * 50).springify() : undefined} style={{ flex: 1, padding: 8 }}>
+    <Animated.View entering={shouldAnimate ? FadeInDown.delay(animationDelay).springify() : undefined} style={{ flex: 1, padding: 8 }}>
       <Pressable onPress={() => onDetailPress(item)} style={{ flex: 1 }}>
         <Surface style={[styles.cardSurface, { backgroundColor: theme.colors.surface }]} elevation={1}>
           {/* Image Section */}
