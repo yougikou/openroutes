@@ -61,7 +61,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="world"
         options={{
-          href: username === 'yougikou' ? '/app/world' : null,
+          href: (username === 'yougikou' || process.env.EXPO_PUBLIC_map_debug === 'true') ? '/app/world' : null,
           tabBarLabel: i18n.t('bottom_map_search'),
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="map-marker-radius" color={color} size={size} />

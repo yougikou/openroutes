@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { convertBlobUrlToRawUrl } from '../../utils/url';
 import MapRouteCard from '../MapRouteCard';
+import MapFilterBar, { FilterState } from '../MapFilterBar';
 
 // Only import Leaflet modules on Web
 let MapContainer: any, TileLayer: any, Marker: any, Popup: any, useMap: any, L: any;
@@ -209,6 +210,12 @@ const WorldMapScreen: React.FC = () => {
   const [mapInstance, setMapInstance] = useState<any>(null);
   const [hasFlownToUser, setHasFlownToUser] = useState(false);
   const [selectedRoutes, setSelectedRoutes] = useState<any[]>([]);
+  const [filters, setFilters] = useState<FilterState>({
+    type: null,
+    difficulty: null,
+    distance: null,
+    time: null,
+  });
 
   // Inject Leaflet CSS and MarkerCluster CSS
   useEffect(() => {
@@ -368,6 +375,34 @@ const WorldMapScreen: React.FC = () => {
       return new Map(geoData.features.map((f: any) => [f.properties.id.toString(), f.properties]));
   }, [geoData]);
 
+  const filteredRoutes = React.useMemo(() => {
+      if (!geoData || !geoData.features) return [];
+      return geoData.features.filter((f: any) => {
+          const p = f.properties;
+          // Type
+          if (filters.type && p.type !== filters.type) return false;
+          // Difficulty
+          if (filters.difficulty && p.difficulty !== filters.difficulty) return false;
+          // Distance
+          if (filters.distance) {
+              const d = p.distance_km || 0;
+              if (filters.distance === '0-5' && d > 5) return false;
+              if (filters.distance === '5-10' && (d <= 5 || d > 10)) return false;
+              if (filters.distance === '10-20' && (d <= 10 || d > 20)) return false;
+              if (filters.distance === '20+' && d <= 20) return false;
+          }
+          // Time
+          if (filters.time) {
+              const t = p.duration_hour || 0;
+              if (filters.time === '0-1' && t > 1) return false;
+              if (filters.time === '1-3' && (t <= 1 || t > 3)) return false;
+              if (filters.time === '3-5' && (t <= 3 || t > 5)) return false;
+              if (filters.time === '5+' && t <= 5) return false;
+          }
+          return true;
+      });
+  }, [geoData, filters]);
+
   const singleMarkerIcon = React.useMemo(() => {
     if (!L) return undefined;
     return L.divIcon({
@@ -439,7 +474,7 @@ const WorldMapScreen: React.FC = () => {
                     zoomToBoundsOnClick={false}
                     eventHandlers={{ clusterclick: handleClusterClick }}
                 >
-                    {geoData.features.map((feature: any, index: number) => {
+                    {filteredRoutes.map((feature: any, index: number) => {
                         const [lng, lat] = feature.geometry.coordinates;
                         const { id, title } = feature.properties;
                         return (
@@ -462,6 +497,8 @@ const WorldMapScreen: React.FC = () => {
           </MapContainer>
        </View>
 
+       <MapFilterBar geoData={geoData} onFilterChange={setFilters} />
+
        <FAB
          icon="crosshairs-gps"
          style={[styles.locateFab, { backgroundColor: theme.colors.surface }]}
@@ -472,7 +509,6 @@ const WorldMapScreen: React.FC = () => {
 
        <FAB
          icon="refresh"
-         label={loading ? "Loading..." : "Reload"}
          style={[styles.reloadFab, { backgroundColor: theme.colors.surface }]}
          onPress={loadRoutesIndex}
          loading={loading}
@@ -503,13 +539,13 @@ const styles = StyleSheet.create({
   },
   locateFab: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 140,
     right: 16,
     zIndex: 10000,
   },
   reloadFab: {
     position: 'absolute',
-    top: 16,
+    bottom: 80,
     right: 16,
     zIndex: 10000,
   }
