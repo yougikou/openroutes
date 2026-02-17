@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Text, useWindowDimensions } from 'react-native';
 import { Chip, IconButton, useTheme, FAB } from 'react-native-paper';
-import Slider from '@react-native-community/slider';
+import RangeSlider from './RangeSlider';
 import { FilterState } from '../utils/filterUtils';
 
 interface MapFilterBarProps {
@@ -33,12 +33,8 @@ export default function MapFilterBar({
 
   // Update internal state when data loads
   useEffect(() => {
-      if (maxDistance > 0 && distanceRange.max === 0) {
-          setDistanceRange({ min: minDistance, max: maxDistance });
-      }
-      if (maxTime > 0 && timeRange.max === 0) {
-          setTimeRange({ min: minTime, max: maxTime });
-      }
+      setDistanceRange({ min: minDistance, max: maxDistance });
+      setTimeRange({ min: minTime, max: maxTime });
   }, [minDistance, maxDistance, minTime, maxTime]);
 
   // Notify parent
@@ -94,6 +90,7 @@ export default function MapFilterBar({
 
   // Calculate generic width for container
   const containerWidth = Math.min(300, width - 20);
+  const sliderWidth = containerWidth - 20; // 20 padding
 
   return (
     <View style={[styles.container, { width: containerWidth, backgroundColor: theme.colors.surface, borderColor: theme.colors.outline }]}>
@@ -131,32 +128,15 @@ export default function MapFilterBar({
             <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>
                 Distance: {distanceRange.min.toFixed(1)} - {distanceRange.max.toFixed(1)} km
             </Text>
-            <View style={styles.sliderContainer}>
-                <Text style={styles.sliderLabel}>Min</Text>
-                <Slider
-                    style={{ flex: 1, height: 40 }}
-                    minimumValue={minDistance}
-                    maximumValue={maxDistance}
+            <View style={{ marginVertical: 10 }}>
+                <RangeSlider
+                    min={minDistance}
+                    max={maxDistance}
                     step={0.1}
-                    value={distanceRange.min}
-                    onValueChange={(val) => setDistanceRange(prev => ({ ...prev, min: Math.min(val, prev.max) }))}
-                    minimumTrackTintColor={theme.colors.primary}
-                    maximumTrackTintColor={theme.colors.outline}
-                    thumbTintColor={theme.colors.primary}
-                />
-            </View>
-            <View style={styles.sliderContainer}>
-                <Text style={styles.sliderLabel}>Max</Text>
-                <Slider
-                    style={{ flex: 1, height: 40 }}
-                    minimumValue={minDistance}
-                    maximumValue={maxDistance}
-                    step={0.1}
-                    value={distanceRange.max}
-                    onValueChange={(val) => setDistanceRange(prev => ({ ...prev, max: Math.max(val, prev.min) }))}
-                    minimumTrackTintColor={theme.colors.primary}
-                    maximumTrackTintColor={theme.colors.outline}
-                    thumbTintColor={theme.colors.primary}
+                    low={distanceRange.min}
+                    high={distanceRange.max}
+                    onValueChanged={(low, high) => setDistanceRange({ min: low, max: high })}
+                    width={sliderWidth}
                 />
             </View>
 
@@ -164,32 +144,15 @@ export default function MapFilterBar({
             <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>
                 Time: {timeRange.min.toFixed(1)} - {timeRange.max.toFixed(1)} h
             </Text>
-            <View style={styles.sliderContainer}>
-                <Text style={styles.sliderLabel}>Min</Text>
-                <Slider
-                    style={{ flex: 1, height: 40 }}
-                    minimumValue={minTime}
-                    maximumValue={maxTime}
+            <View style={{ marginVertical: 10 }}>
+                <RangeSlider
+                    min={minTime}
+                    max={maxTime}
                     step={0.1}
-                    value={timeRange.min}
-                    onValueChange={(val) => setTimeRange(prev => ({ ...prev, min: Math.min(val, prev.max) }))}
-                    minimumTrackTintColor={theme.colors.primary}
-                    maximumTrackTintColor={theme.colors.outline}
-                    thumbTintColor={theme.colors.primary}
-                />
-            </View>
-            <View style={styles.sliderContainer}>
-                <Text style={styles.sliderLabel}>Max</Text>
-                <Slider
-                    style={{ flex: 1, height: 40 }}
-                    minimumValue={minTime}
-                    maximumValue={maxTime}
-                    step={0.1}
-                    value={timeRange.max}
-                    onValueChange={(val) => setTimeRange(prev => ({ ...prev, max: Math.max(val, prev.min) }))}
-                    minimumTrackTintColor={theme.colors.primary}
-                    maximumTrackTintColor={theme.colors.outline}
-                    thumbTintColor={theme.colors.primary}
+                    low={timeRange.min}
+                    high={timeRange.max}
+                    onValueChanged={(low, high) => setTimeRange({ min: low, max: high })}
+                    width={sliderWidth}
                 />
             </View>
              <View style={{ height: 20 }} />
@@ -249,13 +212,5 @@ const styles = StyleSheet.create({
   },
   chip: {
     margin: 4,
-  },
-  sliderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sliderLabel: {
-    width: 30,
-    fontSize: 12,
   },
 });
