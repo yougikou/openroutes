@@ -342,6 +342,8 @@ export const createIssue = async (routeData: RouteDraft, token: string): Promise
     title: year + '-' + month + '-' + day + ' ' + routeData.name,
     body: yaml.dump({
       name: routeData.name,
+      type: routeData.type,
+      difficulty: routeData.difficulty,
       date: routeData.date,
       distance_km: routeData.distance_km,
       duration_hour: routeData.duration_hour,

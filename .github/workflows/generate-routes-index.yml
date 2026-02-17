@@ -94,6 +94,23 @@ jobs:
                   continue;
                 }
 
+                // Extract type/difficulty from labels if missing in YAML
+                const knownTypes = ['hiking', 'walking', 'cycling'];
+                const knownDifficulties = ['easy', 'normal', 'moderate', 'hard'];
+
+                let type = data.type;
+                let difficulty = data.difficulty;
+
+                if (!type || !difficulty) {
+                  const labels = (issue.labels || []).map(l => (typeof l === 'string' ? l : l.name));
+                  if (!type) {
+                    type = labels.find(l => knownTypes.includes(l));
+                  }
+                  if (!difficulty) {
+                    difficulty = labels.find(l => knownDifficulties.includes(l));
+                  }
+                }
+
                 // GeoJSON Feature
                 const feature = {
                   type: "Feature",
@@ -106,8 +123,8 @@ jobs:
                     title: data.name || issue.title,
                     distance_km: data.distance_km,
                     duration_hour: data.duration_hour,
-                    type: data.type,
-                    difficulty: data.difficulty
+                    type: type,
+                    difficulty: difficulty
                   }
                 };
 
