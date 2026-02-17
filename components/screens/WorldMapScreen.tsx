@@ -214,8 +214,8 @@ const WorldMapScreen: React.FC = () => {
   const [filters, setFilters] = useState<FilterState>({
     types: new Set(),
     difficulties: new Set(),
-    distance: { min: 0, max: 100 },
-    time: { min: 0, max: 10 },
+    distance: { min: 0, max: Infinity },
+    time: { min: 0, max: Infinity },
   });
 
   // Inject Leaflet CSS and MarkerCluster CSS
@@ -371,29 +371,6 @@ const WorldMapScreen: React.FC = () => {
     loadRoutesIndex();
   }, []);
 
-  // Calculate Min/Max for Sliders
-  const { minDistance, maxDistance, minTime, maxTime } = useMemo(() => {
-    let minD = 0, maxD = 100, minT = 0, maxT = 10;
-    if (geoData && geoData.features && geoData.features.length > 0) {
-        const distances = geoData.features
-           .map((f: any) => f.properties.distance_km)
-           .filter((v: any) => typeof v === 'number');
-        const times = geoData.features
-           .map((f: any) => f.properties.duration_hour)
-           .filter((v: any) => typeof v === 'number');
-
-        if (distances.length > 0) {
-            minD = Math.floor(Math.min(...distances));
-            maxD = Math.ceil(Math.max(...distances));
-        }
-        if (times.length > 0) {
-            minT = Math.floor(Math.min(...times));
-            maxT = Math.ceil(Math.max(...times));
-        }
-    }
-    return { minDistance: minD, maxDistance: maxD, minTime: minT, maxTime: maxT };
-  }, [geoData]);
-
   const routeMap = React.useMemo(() => {
       if (!geoData) return new Map();
       return new Map(geoData.features.map((f: any) => [f.properties.id.toString(), f.properties]));
@@ -499,10 +476,6 @@ const WorldMapScreen: React.FC = () => {
        </View>
 
        <MapFilterBar
-         minDistance={minDistance}
-         maxDistance={maxDistance}
-         minTime={minTime}
-         maxTime={maxTime}
          onFilterChange={setFilters}
        />
 
