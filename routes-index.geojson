@@ -15,7 +15,9 @@
         "id": 94,
         "title": "吾国山",
         "distance_km": 7,
-        "duration_hour": "4"
+        "duration_hour": "4",
+        "type": "hiking",
+        "difficulty": "moderate"
       }
     },
     {
@@ -32,7 +34,9 @@
         "id": 92,
         "title": "鎌倉大仏ハイキングコース",
         "distance_km": 4.2,
-        "duration_hour": 1.6
+        "duration_hour": 1.6,
+        "type": "hiking",
+        "difficulty": "easy"
       }
     },
     {
@@ -49,7 +53,9 @@
         "id": 88,
         "title": "東大島〜東銀座",
         "distance_km": 7.8,
-        "duration_hour": 0.7
+        "duration_hour": 0.7,
+        "type": "cycling",
+        "difficulty": "normal"
       }
     }
   ]
