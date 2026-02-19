@@ -3,6 +3,8 @@ import { View, StyleSheet, ScrollView, Text, useWindowDimensions } from 'react-n
 import { Chip, IconButton, useTheme, FAB } from 'react-native-paper';
 import RangeSlider from './RangeSlider';
 import { FilterState } from '../utils/filterUtils';
+import i18n from './i18n/i18n';
+import { useLanguage } from './i18n/LanguageContext';
 
 const TIME_STEPS = [0, 0.5, 1, 2, 3, 5, 7, 11, 13, Infinity];
 const DISTANCE_STEPS = [0, 1, 2, 3, 5, 7, 11, 13, 20, Infinity];
@@ -16,6 +18,7 @@ export default function MapFilterBar({
 }: MapFilterBarProps) {
   const theme = useTheme();
   const { width } = useWindowDimensions();
+  useLanguage(); // trigger re-render on language change
   const [isVisible, setIsVisible] = useState(false);
 
   // Filters State
@@ -68,6 +71,7 @@ export default function MapFilterBar({
         style={styles.iconBtn}
         iconColor={isSelected ? theme.colors.onPrimary : theme.colors.primary}
         containerColor={isSelected ? theme.colors.primary : undefined}
+        accessibilityLabel={i18n.t(type)}
       />
     );
   };
@@ -81,6 +85,7 @@ export default function MapFilterBar({
         style={[styles.fab, { backgroundColor: theme.colors.surface }]}
         onPress={() => setIsVisible(true)}
         size="small"
+        accessibilityLabel={i18n.t('filter_title')}
       />
     );
   }
@@ -92,13 +97,13 @@ export default function MapFilterBar({
   return (
     <View style={[styles.container, { width: containerWidth, backgroundColor: theme.colors.surface, borderColor: theme.colors.outline }]}>
         <View style={styles.header}>
-            <Text style={[styles.title, { color: theme.colors.onSurface }]}>Filters</Text>
+            <Text style={[styles.title, { color: theme.colors.onSurface }]}>{i18n.t('filter_title')}</Text>
             <IconButton icon="close" size={20} onPress={() => setIsVisible(false)} />
         </View>
 
         <ScrollView style={styles.content}>
             {/* Type Section */}
-            <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>Type</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>{i18n.t('label_type')}</Text>
             <View style={styles.row}>
                 {renderTypeButton('hiking', 'hiking')}
                 {renderTypeButton('cycling', 'bike')}
@@ -106,7 +111,7 @@ export default function MapFilterBar({
             </View>
 
             {/* Difficulty Section */}
-            <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>Difficulty</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>{i18n.t('label_difficulty')}</Text>
             <View style={styles.rowWrap}>
                 {['easy', 'normal', 'moderate', 'hard'].map((d) => (
                     <Chip
@@ -116,14 +121,14 @@ export default function MapFilterBar({
                         style={styles.chip}
                         showSelectedOverlay
                     >
-                        {d}
+                        {i18n.t(d)}
                     </Chip>
                 ))}
             </View>
 
             {/* Distance Slider */}
             <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>
-                Distance: {formatVal(DISTANCE_STEPS[distanceIndexRange.min])} - {formatVal(DISTANCE_STEPS[distanceIndexRange.max])} km
+                {i18n.t('label_distance')}: {formatVal(DISTANCE_STEPS[distanceIndexRange.min])} - {formatVal(DISTANCE_STEPS[distanceIndexRange.max])} {i18n.t('home_unit_km')}
             </Text>
             <View style={{ marginVertical: 10 }}>
                 <RangeSlider
@@ -139,7 +144,7 @@ export default function MapFilterBar({
 
             {/* Time Slider */}
             <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>
-                Time: {formatVal(TIME_STEPS[timeIndexRange.min])} - {formatVal(TIME_STEPS[timeIndexRange.max])} h
+                {i18n.t('label_time')}: {formatVal(TIME_STEPS[timeIndexRange.min])} - {formatVal(TIME_STEPS[timeIndexRange.max])} {i18n.t('home_unit_hour')}
             </Text>
             <View style={{ marginVertical: 10 }}>
                 <RangeSlider
