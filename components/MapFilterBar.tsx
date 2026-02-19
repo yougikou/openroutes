@@ -60,23 +60,42 @@ export default function MapFilterBar({
     setSelectedDifficulties(newSet);
   };
 
+  const resetFilters = () => {
+    setSelectedTypes(new Set());
+    setSelectedDifficulties(new Set());
+    setDistanceIndexRange({ min: 0, max: DISTANCE_STEPS.length - 1 });
+    setTimeIndexRange({ min: 0, max: TIME_STEPS.length - 1 });
+  };
+
   const formatVal = (val: number) => val === Infinity ? '∞' : val.toString();
 
   if (!isVisible) {
     return (
-      <FAB
-        icon="filter"
-        style={[styles.fab, { backgroundColor: theme.colors.surface }]}
-        onPress={() => setIsVisible(true)}
-        size="small"
-        accessibilityLabel={i18n.t('filter_title')}
-      />
+      <View style={styles.fabContainer}>
+        <FAB
+          icon="filter"
+          style={[styles.fabItem, { backgroundColor: theme.colors.surface }]}
+          onPress={() => setIsVisible(true)}
+          size="small"
+          accessibilityLabel={i18n.t('filter_title')}
+        />
+        <View style={{ width: 10 }} />
+        <FAB
+          icon="filter-off"
+          style={[styles.fabItem, { backgroundColor: theme.colors.surface }]}
+          onPress={resetFilters}
+          size="small"
+          accessibilityLabel="Clear filters"
+        />
+      </View>
     );
   }
 
   // Calculate generic width for container
   const containerWidth = Math.min(300, width - 20);
-  const sliderWidth = containerWidth - 20; // 20 padding
+  const SLIDER_MARGIN_HORIZONTAL = 10;
+  // 20 is padding of content (10 left + 10 right)
+  const sliderWidth = containerWidth - 20 - (SLIDER_MARGIN_HORIZONTAL * 2);
 
   return (
     <View style={[styles.container, { width: containerWidth }]}>
@@ -130,7 +149,7 @@ export default function MapFilterBar({
             <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>
                 {i18n.t('label_distance')}: {formatVal(DISTANCE_STEPS[distanceIndexRange.min])} - {formatVal(DISTANCE_STEPS[distanceIndexRange.max])} {i18n.t('home_unit_km')}
             </Text>
-            <View style={{ marginVertical: 10 }}>
+            <View style={{ marginVertical: 4, marginHorizontal: SLIDER_MARGIN_HORIZONTAL }}>
                 <RangeSlider
                     min={0}
                     max={DISTANCE_STEPS.length - 1}
@@ -146,7 +165,7 @@ export default function MapFilterBar({
             <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>
                 {i18n.t('label_time')}: {formatVal(TIME_STEPS[timeIndexRange.min])} - {formatVal(TIME_STEPS[timeIndexRange.max])} {i18n.t('home_unit_hour')}
             </Text>
-            <View style={{ marginVertical: 10 }}>
+            <View style={{ marginVertical: 4, marginHorizontal: SLIDER_MARGIN_HORIZONTAL }}>
                 <RangeSlider
                     min={0}
                     max={TIME_STEPS.length - 1}
@@ -157,18 +176,22 @@ export default function MapFilterBar({
                     width={sliderWidth}
                 />
             </View>
-             <View style={{ height: 20 }} />
         </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  fab: {
+  fabContainer: {
     position: 'absolute',
     top: 10,
     left: 10,
     zIndex: 2000,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  fabItem: {
+    // FAB styles handled inline or by Paper
   },
   container: {
     position: 'absolute',
@@ -198,14 +221,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    marginTop: 10,
-    marginBottom: 5,
+    marginTop: 6,
+    marginBottom: 2,
   },
   rowWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
   chip: {
-    margin: 4,
+    margin: 2,
   },
 });
