@@ -6,7 +6,7 @@ Explore nature, record your tracks, completely free and in your control.
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](./README_EN.md)
 [![中文](https://img.shields.io/badge/lang-中文-red.svg)](./README.md)
 
-[🌐 Visit Demo Site](https://yougikou.github.io/openroutes/)
+[🌐 Visit Official Site](https://yougikou.github.io/openroutes/)
 
 ## 🌟 What is OpenRoutes?
 
@@ -104,6 +104,8 @@ We are committed to building the purest outdoor community. Here is our developme
 - [x] **Map Visualization**: Leaflet-based interactive map.
 - [x] **Issue CMS**: Content management using GitHub Issues.
 - [x] **PWA Support**: Installable to home screen, basic offline functionality.
+- [x] **Multilingual Support**: Switch between English, Japanese, and Chinese.
+- [x] **Smart Filtering**: Filter routes by type, difficulty, distance, and duration.
 
 ### 🚧 Phase 2: Experience Upgrade (In Progress)
 - [ ] **Image Storage Migration**: Remove Imgur dependency, store images directly in GitHub Issue attachments or Releases to achieve 100% data decentralization.
