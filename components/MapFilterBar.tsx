@@ -12,15 +12,18 @@ const DISTANCE_STEPS = [0, 1, 2, 3, 5, 7, 11, 13, 20, Infinity];
 
 interface MapFilterBarProps {
   onFilterChange: (filters: FilterState) => void;
+  visible: boolean;
+  setVisible: (visible: boolean) => void;
 }
 
 export default function MapFilterBar({
   onFilterChange,
+  visible,
+  setVisible,
 }: MapFilterBarProps) {
   const theme = useTheme();
   const { width } = useWindowDimensions();
   useLanguage(); // trigger re-render on language change
-  const [isVisible, setIsVisible] = useState(false);
 
   // Filters State
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
@@ -69,13 +72,13 @@ export default function MapFilterBar({
 
   const formatVal = (val: number) => val === Infinity ? '∞' : val.toString();
 
-  if (!isVisible) {
+  if (!visible) {
     return (
       <View style={styles.fabContainer}>
         <FAB
           icon="filter"
           style={[styles.fabItem, { backgroundColor: theme.colors.surface }]}
-          onPress={() => setIsVisible(true)}
+          onPress={() => setVisible(true)}
           size="small"
           accessibilityLabel={i18n.t('filter_title')}
         />
@@ -103,12 +106,6 @@ export default function MapFilterBar({
             intensity={50}
             tint="light"
             style={[StyleSheet.absoluteFill, styles.blur]}
-        />
-        <IconButton
-            icon="close"
-            size={20}
-            onPress={() => setIsVisible(false)}
-            style={styles.closeButton}
         />
 
         <ScrollView style={styles.content}>
@@ -208,15 +205,9 @@ const styles = StyleSheet.create({
   blur: {
     // Ensuring blur covers container
   },
-  closeButton: {
-    position: 'absolute',
-    top: 5,
-    right: 5,
-    zIndex: 10,
-  },
   content: {
     padding: 10,
-    paddingTop: 30,
+    paddingTop: 10,
   },
   sectionTitle: {
     fontSize: 14,
