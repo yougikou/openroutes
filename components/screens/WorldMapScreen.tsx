@@ -9,7 +9,7 @@ import MapFilterBar from '../MapFilterBar';
 import { FilterState, filterRoutes } from '../../utils/filterUtils';
 
 // Only import Leaflet modules on Web
-let MapContainer: any, TileLayer: any, Marker: any, Popup: any, useMap: any, L: any;
+let MapContainer: any, TileLayer: any, Marker: any, Popup: any, useMap: any, useMapEvents: any, L: any;
 let MarkerClusterGroup: any;
 
 interface DeviceOrientationEventiOS extends DeviceOrientationEvent {
@@ -26,6 +26,7 @@ if (Platform.OS === 'web') {
       Marker = ReactLeaflet.Marker;
       Popup = ReactLeaflet.Popup;
       useMap = ReactLeaflet.useMap;
+      useMapEvents = ReactLeaflet.useMapEvents;
       L = require('leaflet');
 
       // Dynamic import for clustering
@@ -201,6 +202,15 @@ const InitialMapFocus = ({ location, setHasFlown }: { location: Location.Locatio
     return null;
 };
 
+const MapClickHandler = ({ onClick }: { onClick: () => void }) => {
+    useMapEvents({
+        click: () => {
+            onClick();
+        },
+    });
+    return null;
+};
+
 const WorldMapScreen: React.FC = () => {
   const theme = useTheme();
   const router = useRouter();
@@ -211,6 +221,7 @@ const WorldMapScreen: React.FC = () => {
   const [mapInstance, setMapInstance] = useState<any>(null);
   const [hasFlownToUser, setHasFlownToUser] = useState(false);
   const [selectedRoutes, setSelectedRoutes] = useState<any[]>([]);
+  const [filterVisible, setFilterVisible] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     types: new Set(),
     difficulties: new Set(),
@@ -443,6 +454,8 @@ const WorldMapScreen: React.FC = () => {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
+            <MapClickHandler onClick={() => setFilterVisible(false)} />
+
             {/* Auto-center on user location once found (only once) */}
             {!hasFlownToUser && userLocation && <InitialMapFocus location={userLocation} setHasFlown={setHasFlownToUser} />}
 
@@ -477,6 +490,8 @@ const WorldMapScreen: React.FC = () => {
 
        <MapFilterBar
          onFilterChange={setFilters}
+         visible={filterVisible}
+         setVisible={setFilterVisible}
        />
 
        <FAB
