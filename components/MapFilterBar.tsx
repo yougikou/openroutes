@@ -95,7 +95,7 @@ export default function MapFilterBar({
   }
 
   // Calculate generic width for container
-  const containerWidth = Math.min(300, width - 20);
+  const containerWidth = width - 20;
   const SLIDER_MARGIN_HORIZONTAL = 10;
   // 20 is padding of content (10 left + 10 right)
   const sliderWidth = containerWidth - 20 - (SLIDER_MARGIN_HORIZONTAL * 2);
