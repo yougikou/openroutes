@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Text, useWindowDimensions } from 'react-native';
 import { Chip, IconButton, useTheme, FAB } from 'react-native-paper';
+import { BlurView } from 'expo-blur';
 import RangeSlider from './RangeSlider';
 import { FilterState } from '../utils/filterUtils';
 import i18n from './i18n/i18n';
@@ -78,7 +79,12 @@ export default function MapFilterBar({
   const sliderWidth = containerWidth - 20; // 20 padding
 
   return (
-    <View style={[styles.container, { width: containerWidth, borderColor: theme.colors.outline }]}>
+    <View style={[styles.container, { width: containerWidth }]}>
+        <BlurView
+            intensity={50}
+            tint="light"
+            style={[StyleSheet.absoluteFill, styles.blur]}
+        />
         <IconButton
             icon="close"
             size={20}
@@ -170,9 +176,14 @@ const styles = StyleSheet.create({
     left: 10,
     maxHeight: '80%',
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    overflow: 'hidden', // Required for BlurView to respect borderRadius
     zIndex: 2000,
     elevation: 4,
+    // No background color here, handled by BlurView
+    // Border removed for cleaner look with blur
+  },
+  blur: {
+    // Ensuring blur covers container
   },
   closeButton: {
     position: 'absolute',

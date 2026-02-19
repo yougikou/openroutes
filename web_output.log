@@ -11,23 +11,40 @@ Starting Metro Bundler
 Waiting on http://localhost:8081
 Logs for your project will appear below.
 Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 93.9% (1828/1886)
-λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 93.9% (1622/1674)
-λ Bundled 3724ms node_modules/expo-router/node/render.js (1786 modules)
-"shadow*" style props are deprecated. Use "boxShadow".
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1977/1977)
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1977/1977)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓░░░░░░░░ 51.3% (530/774)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 68.7% (614/812)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 83.5% (1522/1666)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88.8% (1504/1596)
 Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
-λ Bundled 56ms node_modules/expo-router/node/render.js (1 module)
+λ Bundled 8661ms node_modules/expo-router/node/render.js (1789 modules)
+λ Bundled 1691ms node_modules/expo-router/node/render.js (1 module)
 "shadow*" style props are deprecated. Use "boxShadow".
-Web Bundled 8068ms node_modules/expo-router/entry.js (1977 modules)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1980/1980)
+Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+"shadow*" style props are deprecated. Use "boxShadow".
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1980/1980)
+Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 190ms node_modules/expo-router/node/render.js (1 module)
+"shadow*" style props are deprecated. Use "boxShadow".
+Web Bundled 13321ms node_modules/expo-router/entry.js (1 module)
+Web Bundled 20805ms node_modules/expo-router/entry.js (1980 modules)
 Error: Premature close
     at onclose (node:internal/streams/end-of-stream:171:30)
     at processTicksAndRejections (node:internal/process/task_queues:85:11)
-Web Bundled 649ms node_modules/expo-router/entry.js (1 module)
-Web Bundled 1340ms node_modules/expo-router/entry.js (1978 modules)
- LOG  [web] Logs will appear in the browser console
-λ Bundled 53ms node_modules/expo-router/node/render.js (1 module)
+Error: Premature close
+    at onclose (node:internal/streams/end-of-stream:171:30)
+    at processTicksAndRejections (node:internal/process/task_queues:85:11)
+Web Bundled 1909ms node_modules/expo-router/entry.js (1 module)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 48.0% (462/667)
+Web Bundled 2926ms node_modules/expo-router/entry.js (1962 modules)
 Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 60ms node_modules/expo-router/node/render.js (1 module)
 "shadow*" style props are deprecated. Use "boxShadow".
-Web Bundled 618ms node_modules/expo-router/entry.js (1 module)
+Web Bundled 676ms node_modules/expo-router/entry.js (1 module)
+Web Bundled 95ms node_modules/expo-router/entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+λ Bundled 71ms node_modules/expo-router/node/render.js (1 module)
+"shadow*" style props are deprecated. Use "boxShadow".
+Web Bundled 781ms node_modules/expo-router/entry.js (1 module)
+Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
