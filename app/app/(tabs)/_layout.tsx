@@ -25,7 +25,7 @@ export default function TabLayout() {
         options={{
           tabBarLabel: i18n.t('bottom_explore'),
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="map-search" color={color} size={size} />
+            <MaterialCommunityIcons name="text-search" color={color} size={size} />
           ),
         }}
       />
@@ -34,7 +34,7 @@ export default function TabLayout() {
         options={{
           tabBarLabel: i18n.t('bottom_map_search'),
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="map-marker-radius" color={color} size={size} />
+            <MaterialCommunityIcons name="map-search" color={color} size={size} />
           ),
         }}
       />
