@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Text, useWindowDimensions } from 'react-native';
 import { Chip, IconButton, useTheme, FAB } from 'react-native-paper';
+import { BlurView } from 'expo-blur';
 import RangeSlider from './RangeSlider';
 import { FilterState } from '../utils/filterUtils';
 import i18n from './i18n/i18n';
@@ -59,23 +60,6 @@ export default function MapFilterBar({
     setSelectedDifficulties(newSet);
   };
 
-  const renderTypeButton = (type: string, icon: string) => {
-    const isSelected = selectedTypes.has(type);
-    return (
-      <IconButton
-        key={type}
-        icon={icon}
-        mode={isSelected ? 'contained' : 'outlined'}
-        selected={isSelected}
-        onPress={() => toggleType(type)}
-        style={styles.iconBtn}
-        iconColor={isSelected ? theme.colors.onPrimary : theme.colors.primary}
-        containerColor={isSelected ? theme.colors.primary : undefined}
-        accessibilityLabel={i18n.t(type)}
-      />
-    );
-  };
-
   const formatVal = (val: number) => val === Infinity ? '∞' : val.toString();
 
   if (!isVisible) {
@@ -95,19 +79,35 @@ export default function MapFilterBar({
   const sliderWidth = containerWidth - 20; // 20 padding
 
   return (
-    <View style={[styles.container, { width: containerWidth, backgroundColor: theme.colors.surface, borderColor: theme.colors.outline }]}>
-        <View style={styles.header}>
-            <Text style={[styles.title, { color: theme.colors.onSurface }]}>{i18n.t('filter_title')}</Text>
-            <IconButton icon="close" size={20} onPress={() => setIsVisible(false)} />
-        </View>
+    <View style={[styles.container, { width: containerWidth }]}>
+        <BlurView
+            intensity={50}
+            tint="light"
+            style={[StyleSheet.absoluteFill, styles.blur]}
+        />
+        <IconButton
+            icon="close"
+            size={20}
+            onPress={() => setIsVisible(false)}
+            style={styles.closeButton}
+        />
 
         <ScrollView style={styles.content}>
             {/* Type Section */}
             <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>{i18n.t('label_type')}</Text>
-            <View style={styles.row}>
-                {renderTypeButton('hiking', 'hiking')}
-                {renderTypeButton('cycling', 'bike')}
-                {renderTypeButton('walking', 'walk')}
+            <View style={styles.rowWrap}>
+                {['hiking', 'cycling', 'walking'].map((type) => (
+                    <Chip
+                        key={type}
+                        icon={type === 'hiking' ? 'hiking' : type === 'cycling' ? 'bike' : 'walk'}
+                        selected={selectedTypes.has(type)}
+                        onPress={() => toggleType(type)}
+                        style={styles.chip}
+                        showSelectedOverlay
+                    >
+                        {i18n.t(type)}
+                    </Chip>
+                ))}
             </View>
 
             {/* Difficulty Section */}
@@ -175,25 +175,25 @@ const styles = StyleSheet.create({
     top: 10,
     left: 10,
     maxHeight: '80%',
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 16,
+    overflow: 'hidden', // Required for BlurView to respect borderRadius
     zIndex: 2000,
     elevation: 4,
+    // No background color here, handled by BlurView
+    // Border removed for cleaner look with blur
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ccc',
+  blur: {
+    // Ensuring blur covers container
   },
-  title: {
-    fontWeight: 'bold',
-    fontSize: 16,
+  closeButton: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    zIndex: 10,
   },
   content: {
     padding: 10,
+    paddingTop: 30,
   },
   sectionTitle: {
     fontSize: 14,
@@ -201,16 +201,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 5,
   },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
   rowWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-  },
-  iconBtn: {
-    margin: 0,
   },
   chip: {
     margin: 4,

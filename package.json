@@ -25,6 +25,7 @@
     "@types/leaflet.markercluster": "^1.5.6",
     "expo": "^54.0.32",
     "expo-auth-session": "~7.0.10",
+    "expo-blur": "~15.0.8",
     "expo-constants": "~18.0.9",
     "expo-dev-client": "~6.0.20",
     "expo-document-picker": "~14.0.8",
