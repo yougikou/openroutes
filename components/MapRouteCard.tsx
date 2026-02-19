@@ -3,6 +3,7 @@ import { View, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { Surface, Text, Button, IconButton, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import i18n from './i18n/i18n';
 
 // Minimal interface for route properties from GeoJSON
 interface RouteProperties {
@@ -36,11 +37,16 @@ export default function MapRouteCard({ routes, onClose }: MapRouteCardProps) {
   const current = routes[index];
 
   // Adjust layout for small screens to avoid overlapping FABs
+  // FABs are at bottom: 140 and bottom: 80.
+  // Card is at bottom: 20.
+  // If card is wide, it might overlap if right margin isn't large enough.
   const isSmallScreen = width < 768;
-  const containerStyle = {
-    right: isSmallScreen ? 80 : 16,
-    width: isSmallScreen ? 'auto' : (Platform.OS === 'web' ? '90%' : 'auto'),
-    alignSelf: (isSmallScreen ? 'auto' : 'center') as 'auto' | 'center',
+
+  const dynamicContainerStyle = {
+      right: isSmallScreen ? 80 : 16,
+      left: 16,
+      width: 'auto' as const,
+      maxWidth: 600,
   };
 
   const handleNext = () => setIndex((prev) => (prev + 1) % routes.length);
@@ -53,21 +59,60 @@ export default function MapRouteCard({ routes, onClose }: MapRouteCardProps) {
       });
   };
 
+  const getTypeIcon = (type: string | undefined) => {
+    switch (type?.toLowerCase()) {
+      case 'hiking': return 'hiking';
+      case 'cycling': return 'bike';
+      case 'walking': return 'walk';
+      default: return 'map-marker';
+    }
+  };
+
+  const getDifficultyColor = (difficulty: string | undefined) => {
+    switch (difficulty?.toLowerCase()) {
+      case 'easy': return '#4CAF50'; // Green
+      case 'normal': return '#2196F3'; // Blue
+      case 'moderate': return '#FF9800'; // Orange
+      case 'hard': return '#F44336'; // Red
+      default: return theme.colors.outline;
+    }
+  };
+
   return (
-    <Surface style={[styles.container, containerStyle, { backgroundColor: theme.colors.surface }]} elevation={4}>
-      {/* Header */}
+    <Surface style={[styles.container, dynamicContainerStyle, { backgroundColor: theme.colors.surface }]} elevation={4}>
+      {/* Header with Title, Icon, Tag */}
       <View style={styles.header}>
-        <View style={styles.titleContainer}>
-            <Text variant="titleMedium" numberOfLines={1} style={{ fontWeight: 'bold' }}>
-              {current.title || `Route #${current.id}`}
-            </Text>
+        <View style={styles.headerContent}>
+            <View style={styles.titleRow}>
+                <Text variant="titleMedium" numberOfLines={1} style={styles.titleText}>
+                  {current.title || `Route #${current.id}`}
+                </Text>
+
+                {current.type && (
+                     <MaterialCommunityIcons
+                        name={getTypeIcon(current.type)}
+                        size={20}
+                        color={theme.colors.primary}
+                        style={styles.typeIcon}
+                     />
+                )}
+
+                {current.difficulty && (
+                     <View style={[styles.difficultyTag, { backgroundColor: getDifficultyColor(current.difficulty) }]}>
+                        <Text style={styles.difficultyText}>
+                           {i18n.t(current.difficulty.toLowerCase())}
+                        </Text>
+                     </View>
+                )}
+            </View>
+
             {routes.length > 1 && (
                 <Text variant="labelSmall" style={{ color: theme.colors.outline }}>
                     {index + 1} / {routes.length}
                 </Text>
             )}
         </View>
-        <IconButton icon="close" size={20} onPress={onClose} style={{ margin: 0 }} />
+        <IconButton icon="close" size={20} onPress={onClose} style={styles.closeButton} />
       </View>
 
       {/* Stats */}
@@ -85,28 +130,21 @@ export default function MapRouteCard({ routes, onClose }: MapRouteCardProps) {
               {current.duration_hour ? `${current.duration_hour} h` : '--'}
             </Text>
           </View>
-          {current.difficulty && (
-              <>
-                  <View style={styles.statSeparator} />
-                  <View style={styles.statItem}>
-                    <Text variant="bodyMedium" style={{ textTransform: 'capitalize' }}>
-                      {current.difficulty}
-                    </Text>
-                  </View>
-              </>
-          )}
+          {/* Difficulty removed from here as it is now in header */}
       </View>
 
       {/* Actions */}
       <View style={styles.actionRow}>
-        {routes.length > 1 ? (
-          <View style={styles.navButtons}>
-            <IconButton icon="chevron-left" onPress={handlePrev} disabled={routes.length <= 1} />
-            <IconButton icon="chevron-right" onPress={handleNext} disabled={routes.length <= 1} />
-          </View>
-        ) : <View style={{flex: 1}} />}
+        <View style={styles.navButtons}>
+             {routes.length > 1 && (
+                <>
+                <IconButton icon="chevron-left" onPress={handlePrev} size={20} />
+                <IconButton icon="chevron-right" onPress={handleNext} size={20} />
+                </>
+             )}
+        </View>
 
-        <Button mode="contained" onPress={handleDetail} style={styles.detailButton}>
+        <Button mode="contained" onPress={handleDetail} style={styles.detailButton} compact>
           View Details
         </Button>
       </View>
@@ -118,16 +156,11 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     bottom: 20,
-    left: 16,
     borderRadius: 16,
     padding: 16,
-    zIndex: 2000, // Above FAB and Map
-    maxWidth: 600, // Limit width on large screens
+    zIndex: 2000,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
@@ -137,27 +170,62 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 8,
   },
-  titleContainer: {
-    flex: 1,
-    paddingRight: 8,
+  headerContent: {
+      flex: 1,
+      paddingRight: 4,
+  },
+  titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 4,
+      flexWrap: 'wrap',
+  },
+  titleText: {
+      fontWeight: 'bold',
+      marginRight: 8,
+      flexShrink: 1,
+  },
+  typeIcon: {
+      marginRight: 8,
+  },
+  difficultyTag: {
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+  difficultyText: {
+      color: 'white',
+      fontSize: 10,
+      fontWeight: 'bold',
+      textTransform: 'uppercase',
+  },
+  closeButton: {
+      margin: 0,
+      marginTop: -8,
+      marginRight: -8,
   },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
+    marginTop: 4,
     backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 8,
     padding: 8,
-    justifyContent: 'space-around', // Distribute evenly
+    // justifyContent: 'space-around',
   },
   statItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginRight: 16,
   },
   statSeparator: {
     width: 1,
     height: 16,
     backgroundColor: '#ccc',
+    marginRight: 16,
   },
   actionRow: {
     flexDirection: 'row',
@@ -166,7 +234,6 @@ const styles = StyleSheet.create({
   },
   navButtons: {
     flexDirection: 'row',
-    marginRight: 16,
   },
   detailButton: {
     marginLeft: 'auto',
