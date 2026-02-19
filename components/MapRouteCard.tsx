@@ -87,7 +87,9 @@ export default function MapRouteCard({ routes, onClose }: MapRouteCardProps) {
                 <Text variant="titleMedium" numberOfLines={1} style={styles.titleText}>
                   {current.title || `Route #${current.id}`}
                 </Text>
+            </View>
 
+            <View style={styles.infoRow}>
                 {current.type && (
                      <MaterialCommunityIcons
                         name={getTypeIcon(current.type)}
@@ -130,7 +132,6 @@ export default function MapRouteCard({ routes, onClose }: MapRouteCardProps) {
               {current.duration_hour ? `${current.duration_hour} h` : '--'}
             </Text>
           </View>
-          {/* Difficulty removed from here as it is now in header */}
       </View>
 
       {/* Actions */}
@@ -145,7 +146,7 @@ export default function MapRouteCard({ routes, onClose }: MapRouteCardProps) {
         </View>
 
         <Button mode="contained" onPress={handleDetail} style={styles.detailButton} compact>
-          View Details
+          {i18n.t('view_details')}
         </Button>
       </View>
     </Surface>
@@ -179,6 +180,11 @@ const styles = StyleSheet.create({
       alignItems: 'center',
       marginBottom: 4,
       flexWrap: 'wrap',
+  },
+  infoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 4,
   },
   titleText: {
       fontWeight: 'bold',
@@ -214,18 +220,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 8,
     padding: 8,
-    // justifyContent: 'space-around',
   },
   statItem: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 16,
+    justifyContent: 'center',
   },
   statSeparator: {
     width: 1,
     height: 16,
     backgroundColor: '#ccc',
-    marginRight: 16,
   },
   actionRow: {
     flexDirection: 'row',
