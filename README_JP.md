@@ -6,7 +6,7 @@
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](./README_EN.md)
 [![中文](https://img.shields.io/badge/lang-中文-red.svg)](./README.md)
 
-[🌐 デモサイトを見る](https://yougikou.github.io/openroutes/)
+[🌐 公式サイトへ](https://yougikou.github.io/openroutes/)
 
 ## 🌟 OpenRoutes とは？
 
@@ -104,6 +104,8 @@ npm run android
 - [x] **地図の可視化**：Leaflet ベースのインタラクティブマップ。
 - [x] **Issue CMS**：GitHub Issue を利用したコンテンツ管理。
 - [x] **PWA サポート**：スマホのホーム画面にインストールでき、基本機能をオフラインで利用可能。
+- [x] **多言語対応**：日本語、英語、中国語の切り替えに対応。
+- [x] **スマートフィルタリング**：種類、難易度、距離、時間でルートを絞り込み。
 
 ### 🚧 第2フェーズ：体験の向上 (進行中)
 - [ ] **画像ストレージの移行**：Imgur への依存を排除し、画像を直接 GitHub Issue の添付ファイルや Releases に保存することで、100% のデータ分散化を実現。
