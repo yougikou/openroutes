@@ -1,0 +1,31 @@
+env: load .env
+env: export EXPO_PUBLIC_GITHUB_OWNER EXPO_PUBLIC_GITHUB_REPO GITHUB_REPOSITORY
+[33m[1mWarning: [22mRoot-level [1m"expo"[22m object found. Ignoring extra keys in Expo config: "scheme", "platforms"
+[90mLearn more: https://expo.fyi/root-expo-object[0m[0m
+Starting project at /app
+Starting Metro Bundler
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 75.5% (1246/1446)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 79.2% (1274/1432)
+λ Bundled 4861ms node_modules/expo-router/node/render.js (1807 modules)
+"shadow*" style props are deprecated. Use "boxShadow".
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1984/1984)
+Web Bundled 9021ms node_modules/expo-router/entry.js (1984 modules)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1984/1984)
+Web Bundled 1500ms node_modules/expo-router/entry.js (1959 modules)
+ LOG  [web] Logs will appear in the browser console
+λ Bundled 60ms node_modules/expo-router/node/render.js (1 module)
+"shadow*" style props are deprecated. Use "boxShadow".
+Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 652ms node_modules/expo-router/entry.js (1 module)
+λ Bundled 60ms node_modules/expo-router/node/render.js (1 module)
+"shadow*" style props are deprecated. Use "boxShadow".
+Web Bundled 671ms node_modules/expo-router/entry.js (1 module)
+Web Bundled 159ms node_modules/expo-router/entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+λ Bundled 61ms node_modules/expo-router/node/render.js (1 module)
+"shadow*" style props are deprecated. Use "boxShadow".
+Web Bundled 581ms node_modules/expo-router/entry.js (1 module)
+Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
