@@ -53,12 +53,12 @@
       "expo-router",
       "@react-native-community/datetimepicker",
       "expo-localization"
+    ],
+    "scheme": "oproutes",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
     ]
-  },
-  "scheme": "oproutes",
-  "platforms": [
-    "ios",
-    "android",
-    "web"
-  ]
+  }
 }
