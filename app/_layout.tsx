@@ -12,6 +12,16 @@ export default function RootLayout(): React.ReactElement {
         .register('/openroutes/sw.js', { scope: '/openroutes/' })
         .catch((err) => console.error('SW registration failed:', err));
     }
+
+    if (Platform.OS === 'web' && navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().then((persistent) => {
+        if (persistent) {
+          console.log('存储被标记为持久化，iOS 较难自动清理。');
+        } else {
+          console.log('无法获取持久化存储权限。');
+        }
+      });
+    }
   }, []);
 
   return (
