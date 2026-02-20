@@ -8,6 +8,7 @@ const OFFLINE_MAPS_KEY = 'offline_maps_metadata';
 export interface OfflineMap extends RouteIssue {
   savedAt: number;
   tileCount: number;
+  size?: number;
 }
 
 // Initialize Leaflet and Plugin
@@ -135,6 +136,7 @@ export const saveOfflineMap = async (
         onProgress(0, tiles.length);
 
         let completed = 0;
+        let totalSize = 0;
         const total = tiles.length;
 
         // 5. Download and Save Manually
@@ -154,6 +156,9 @@ export const saveOfflineMap = async (
              try {
                  const blob = await downloadTile(tileInfo.url);
                  if (blob) {
+                    if (blob.size) {
+                        totalSize += blob.size;
+                    }
                     await saveTile(tileInfo, blob);
                  }
              } catch (e) {
@@ -174,7 +179,8 @@ export const saveOfflineMap = async (
         const newMap: OfflineMap = {
             ...route,
             savedAt: Date.now(),
-            tileCount: total
+            tileCount: total,
+            size: totalSize
         };
         await AsyncStorage.setItem(OFFLINE_MAPS_KEY, JSON.stringify([newMap, ...filtered]));
         console.log('Metadata saved');
