@@ -48,10 +48,20 @@ export default function OfflineMapsScreen() {
      });
   };
 
+  const formatSize = (bytes?: number) => {
+      if (!bytes) return '';
+      const mb = bytes / (1024 * 1024);
+      if (mb < 1) {
+          const kb = bytes / 1024;
+          return `(${kb.toFixed(1)} KB)`;
+      }
+      return `(${mb.toFixed(1)} MB)`;
+  };
+
   const renderItem = ({ item }: { item: OfflineMap }) => (
     <List.Item
       title={item.title}
-      description={`${new Date(item.savedAt).toLocaleDateString()} - ${item.tileCount || 0} tiles`}
+      description={`${new Date(item.savedAt).toLocaleDateString()} - ${item.tileCount || 0} tiles ${formatSize(item.size)}`}
       left={props => <List.Icon {...props} icon="map-check" />}
       right={props => (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
