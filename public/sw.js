@@ -8,5 +8,13 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Pass through to network
+  const url = new URL(event.request.url);
+  // Check if it's a map tile request (OpenStreetMap)
+  if (url.hostname.includes('openstreetmap.org')) {
+    event.respondWith(
+      fetch(event.request.url, {
+        mode: 'cors'
+      })
+    );
+  }
 });
