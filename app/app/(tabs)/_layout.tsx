@@ -39,6 +39,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="offline"
+        options={{
+          tabBarLabel: i18n.t('bottom_offline'),
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="map-check" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="share"
         options={{
           tabBarLabel: i18n.t('bottom_share'),

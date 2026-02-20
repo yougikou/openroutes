@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
-import { Appbar, Text, Avatar, Button, Surface, Chip, Divider, useTheme } from 'react-native-paper';
+import { View, ScrollView, StyleSheet, useWindowDimensions, Platform } from 'react-native';
+import { Appbar, Text, Avatar, Button, Surface, Chip, Divider, useTheme, Portal, Dialog, ProgressBar, Snackbar } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Head from 'expo-router/head';
 import { Image } from 'expo-image';
 import i18n from '../i18n/i18n';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { RouteIssue, fetchIssueById } from '../apis/GitHubAPI';
+import { saveOfflineMap } from '../../utils/offlineMapUtils';
 
 export default function RouteDetailScreen() {
   const router = useRouter();
@@ -16,6 +17,36 @@ export default function RouteDetailScreen() {
   const { width } = useWindowDimensions();
 
   const [routeItem, setRouteItem] = useState<RouteIssue | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMsg, setSnackbarMsg] = useState('');
+
+  const handleDownloadPress = () => {
+     setShowConfirm(true);
+  };
+
+  const executeDownload = async () => {
+      setShowConfirm(false);
+      setDownloading(true);
+      setProgress(0);
+      try {
+          if (routeItem) {
+            await saveOfflineMap(routeItem, (current, total) => {
+                setProgress(total > 0 ? current / total : 0);
+            });
+            setSnackbarMsg(i18n.t('offline_download_success'));
+            setSnackbarVisible(true);
+          }
+      } catch (e) {
+          console.error(e);
+          setSnackbarMsg(i18n.t('offline_download_error'));
+          setSnackbarVisible(true);
+      } finally {
+          setDownloading(false);
+      }
+  };
 
   useEffect(() => {
     if (params.item && typeof params.item === 'string') {
@@ -121,19 +152,30 @@ export default function RouteDetailScreen() {
             <Divider style={{ marginVertical: 16 }} />
 
             {routeItem.geojson?.uri && (
-                 <Button
-                    mode="contained"
-                    icon="map"
-                    style={{ marginTop: 24 }}
-                    onPress={() => {
-                        router.push({
-                          pathname: '/app/map',
-                          params: { url: routeItem.geojson.uri, title: routeItem.title, source: 'detail' }
-                        });
-                    }}
-                 >
-                    {i18n.t('view_in_map')}
-                 </Button>
+                 <View style={{ gap: 12, marginTop: 24 }}>
+                     <Button
+                        mode="contained"
+                        icon="map"
+                        onPress={() => {
+                            router.push({
+                              pathname: '/app/map',
+                              params: { url: routeItem.geojson.uri, title: routeItem.title, source: 'detail' }
+                            });
+                        }}
+                     >
+                        {i18n.t('view_in_map')}
+                     </Button>
+                     {Platform.OS === 'web' && (
+                         <Button
+                            mode="outlined"
+                            icon="download"
+                            onPress={handleDownloadPress}
+                            disabled={downloading}
+                         >
+                            {i18n.t('offline_download_btn')}
+                         </Button>
+                     )}
+                 </View>
             )}
 
             {routeItem.description && (
@@ -144,6 +186,35 @@ export default function RouteDetailScreen() {
             )}
          </View>
       </ScrollView>
+
+      <Portal>
+        <Dialog visible={showConfirm} onDismiss={() => setShowConfirm(false)}>
+            <Dialog.Title>{i18n.t('offline_manage_title')}</Dialog.Title>
+            <Dialog.Content>
+                <Text variant="bodyMedium">{i18n.t('offline_download_confirm')}</Text>
+            </Dialog.Content>
+            <Dialog.Actions>
+                <Button onPress={() => setShowConfirm(false)}>{i18n.t('cancel')}</Button>
+                <Button onPress={executeDownload}>{i18n.t('confirm')}</Button>
+            </Dialog.Actions>
+        </Dialog>
+
+        <Dialog visible={downloading} dismissable={false}>
+            <Dialog.Title>{i18n.t('offline_downloading')}</Dialog.Title>
+            <Dialog.Content>
+                 <ProgressBar progress={progress} />
+                 <Text style={{marginTop: 10, textAlign: 'center'}}>{Math.round(progress * 100)}%</Text>
+            </Dialog.Content>
+        </Dialog>
+
+        <Snackbar
+            visible={snackbarVisible}
+            onDismiss={() => setSnackbarVisible(false)}
+            duration={3000}
+        >
+            {snackbarMsg}
+        </Snackbar>
+      </Portal>
     </View>
   );
 }
