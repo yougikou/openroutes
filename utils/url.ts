@@ -1,3 +1,6 @@
 export const convertBlobUrlToRawUrl = (githubBlobUrl: string): string => {
-  return githubBlobUrl.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+  if (githubBlobUrl.includes('/blob/')) {
+    return githubBlobUrl.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+  }
+  return githubBlobUrl;
 };
