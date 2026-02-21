@@ -5,6 +5,7 @@ import { convertBlobUrlToRawUrl } from './url';
 
 const OFFLINE_MAPS_KEY = 'offline_maps_metadata';
 const TILE_LIMIT = 10000;
+const CACHE_NAME = 'osm-tiles';
 
 export interface OfflineMap extends RouteIssue {
   savedAt: number;
@@ -12,7 +13,7 @@ export interface OfflineMap extends RouteIssue {
   size?: number;
 }
 
-// Initialize Leaflet and Plugin
+// Initialize Leaflet
 let L: any;
 if (Platform.OS === 'web') {
     if (typeof window !== 'undefined') {
@@ -21,10 +22,10 @@ if (Platform.OS === 'web') {
             L = require('leaflet');
             // @ts-ignore
             window.L = L;
-            require('leaflet.offline');
-            console.log('Leaflet offline plugin loaded successfully');
+            // leaflet.offline is no longer required as we use Cache API directly
+            console.log('Leaflet loaded successfully');
         } catch (e) {
-            console.warn('Leaflet offline load failed', e);
+            console.warn('Leaflet load failed', e);
         }
     }
 }
@@ -93,16 +94,12 @@ const getTileUrls = (bounds: any, minZoom: number, maxZoom: number, urlTemplate:
         for (let x = xStart; x <= xEnd; x++) {
             for (let y = yStart; y <= yEnd; y++) {
                 const url = urlTemplate
-                    .replace('{s}', 'a') // Default subdomain
+                    .replace('{s}', 'a') // Default subdomain to 'a' for consistent caching
                     .replace('{x}', x.toString())
                     .replace('{y}', y.toString())
                     .replace('{z}', z.toString());
 
-                // key is used by leaflet.offline to store in IndexedDB
-                // It usually uses the url as key if not specified otherwise
-                const key = url;
-
-                tiles.push({ x, y, z, url, key });
+                tiles.push({ x, y, z, url });
             }
         }
     }
@@ -115,16 +112,6 @@ export const saveOfflineMap = async (
 ): Promise<void> => {
     if (Platform.OS !== 'web' || !L) {
         throw new Error('Offline maps only supported on Web with Leaflet loaded');
-    }
-
-    // Dynamic require to get helper functions
-    let downloadTile: any, saveTile: any;
-    try {
-        const leafletOffline = require('leaflet.offline');
-        downloadTile = leafletOffline.downloadTile;
-        saveTile = leafletOffline.saveTile;
-    } catch (e) {
-        throw new Error('leaflet.offline module not found');
     }
 
     try {
@@ -187,27 +174,30 @@ export const saveOfflineMap = async (
         let totalSize = 0;
         const total = tiles.length;
 
-        // 5. Download and Save Manually
-        // We do this sequentially or with limited concurrency to be nice to OSM
-        // and to avoid browser network saturation.
-        for (const tile of tiles) {
-             const tileInfo = {
-                 key: tile.key,
-                 url: tile.url,
-                 x: tile.x,
-                 y: tile.y,
-                 z: tile.z,
-                 urlTemplate: urlTemplate,
-                 createdAt: Date.now()
-             };
+        // 5. Download and Save to Cache Storage
+        // We do this sequentially to avoid browser network saturation.
+        let cache: any = null;
+        if ('caches' in window) {
+            cache = await caches.open(CACHE_NAME);
+        }
 
+        for (const tile of tiles) {
              try {
-                 const blob = await downloadTile(tileInfo.url);
-                 if (blob) {
+                 const res = await fetch(tile.url);
+                 if (res.ok) {
+                    const blob = await res.blob();
                     if (blob.size) {
                         totalSize += blob.size;
                     }
-                    await saveTile(tileInfo, blob);
+
+                    if (cache) {
+                         const responseToCache = new Response(blob, {
+                             status: 200,
+                             statusText: 'OK',
+                             headers: { 'Content-Type': 'image/png' }
+                         });
+                         await cache.put(tile.url, responseToCache);
+                    }
                  }
              } catch (e) {
                  console.error(`Failed to save tile ${tile.url}`, e);
@@ -260,16 +250,15 @@ export const deleteOfflineMap = async (id: number): Promise<void> => {
 
     try {
         const maps = await getOfflineMaps();
-        const target = maps.find(m => m.id === id);
 
         // Remove from List
         const newMaps = maps.filter(m => m.id !== id);
         await AsyncStorage.setItem(OFFLINE_MAPS_KEY, JSON.stringify(newMaps));
 
-        // Ideally remove from IndexedDB via leaflet.offline if possible,
-        // but it requires matching keys.
-        // For now, metadata removal effectively "hides" it.
-        // Browser storage management handles the rest eventually.
+        // Note: We are using Cache Storage API directly now.
+        // Tiles are not explicitly deleted here because we don't track the exact list of URLs per map
+        // in a way that allows easy bulk deletion without iterating the whole cache.
+        // Browser cache eviction policies will eventually handle unused tiles.
     } catch (e) {
         console.error('Failed to delete map', e);
     }
