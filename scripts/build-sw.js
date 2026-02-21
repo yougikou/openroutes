@@ -5,7 +5,8 @@ const buildSW = () => {
     globDirectory: 'dist',
     globPatterns: [
       '**/*.{html,json,js,css}',
-      '**/*.{png,jpg,jpeg,svg,ico}'
+      '**/*.{png,jpg,jpeg,svg,ico}',
+      '**/*.{ttf,woff,woff2,otf}'
     ],
     swDest: 'dist/sw.js',
     importScripts: ['map-tile-sw.js'],
