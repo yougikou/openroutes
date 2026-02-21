@@ -220,6 +220,7 @@ const WorldMapScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [mapInstance, setMapInstance] = useState<any>(null);
   const [hasFlownToUser, setHasFlownToUser] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
   const [selectedRoutes, setSelectedRoutes] = useState<any[]>([]);
   const [filterVisible, setFilterVisible] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
@@ -333,21 +334,49 @@ const WorldMapScreen: React.FC = () => {
 
   const handleLocateMe = async () => {
     if (Platform.OS !== 'web') return;
+
+    setIsLocating(true);
+    // Prevent InitialMapFocus from interfering if it hasn't run yet
+    setHasFlownToUser(true);
+
     handleEnableCompass();
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         window.alert('Permission to access location was denied');
+        setIsLocating(false);
         return;
       }
       const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       setUserLocation(location);
+
       if (mapInstance) {
-        mapInstance.flyTo([location.coords.latitude, location.coords.longitude], 15);
+        const targetLat = location.coords.latitude;
+        const targetLng = location.coords.longitude;
+        const targetZoom = 15;
+        const currentCenter = mapInstance.getCenter();
+        const currentZoom = mapInstance.getZoom();
+
+        const isSamePos = Math.abs(currentCenter.lat - targetLat) < 0.00001 &&
+                          Math.abs(currentCenter.lng - targetLng) < 0.00001;
+
+        if (isSamePos && currentZoom === targetZoom) {
+            setIsLocating(false);
+        } else {
+             const onMoveEnd = () => {
+                 setIsLocating(false);
+                 mapInstance.off('moveend', onMoveEnd);
+             };
+             mapInstance.once('moveend', onMoveEnd);
+             mapInstance.flyTo([targetLat, targetLng], targetZoom);
+        }
+      } else {
+        setIsLocating(false);
       }
     } catch (err) {
       console.warn(err);
       window.alert('Failed to get current location');
+      setIsLocating(false);
     }
   };
 
@@ -485,7 +514,7 @@ const WorldMapScreen: React.FC = () => {
                 </MarkerClusterGroup>
             )}
 
-            {userLocation && <UserLocationMarker userLocation={userLocation} heading={heading} visible={hasFlownToUser} />}
+            {userLocation && <UserLocationMarker userLocation={userLocation} heading={heading} visible={hasFlownToUser && !isLocating} />}
           </MapContainer>
        </View>
 
