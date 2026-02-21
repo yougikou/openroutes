@@ -4,6 +4,7 @@ import { RouteIssue } from '../components/apis/GitHubAPI';
 import { convertBlobUrlToRawUrl } from './url';
 
 const OFFLINE_MAPS_KEY = 'offline_maps_metadata';
+const TILE_LIMIT = 10000;
 
 export interface OfflineMap extends RouteIssue {
   savedAt: number;
@@ -26,6 +27,39 @@ if (Platform.OS === 'web') {
             console.warn('Leaflet offline load failed', e);
         }
     }
+}
+
+// Helper to get normalized Mercator Y coordinate (0 at top, 1 at bottom)
+const getNormalizedY = (lat: number) => {
+    return (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2;
+}
+
+const estimateFitZoom = (bounds: any): number => {
+    const north = bounds.getNorth();
+    const south = bounds.getSouth();
+    const east = bounds.getEast();
+    const west = bounds.getWest();
+
+    const screenWidth = 360;
+    const screenHeight = 600;
+
+    const lngDiff = Math.abs(east - west);
+    // x fraction = lngDiff / 360
+    const xFraction = lngDiff / 360;
+
+    const yNorth = getNormalizedY(north);
+    const ySouth = getNormalizedY(south);
+    const yFraction = Math.abs(ySouth - yNorth);
+
+    // Avoid division by zero or infinites
+    if (xFraction === 0 || yFraction === 0) return 15;
+
+    const zoomX = Math.log2(screenWidth / (xFraction * 256));
+    const zoomY = Math.log2(screenHeight / (yFraction * 256));
+
+    const zoom = Math.min(zoomX, zoomY);
+    // Clamp to [0, 18] and floor
+    return Math.max(0, Math.min(Math.floor(zoom), 18));
 }
 
 // Standard OSM Tile calculation
@@ -111,12 +145,26 @@ export const saveOfflineMap = async (
         const urlTemplate = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
         // 4. Calculate Tiles to Save
-        // Using zoom 12-16 to provide reasonable detail for offline use.
-        // Max zoom 18 can be extremely heavy (exponentially more tiles).
-        const minZoom = 12;
-        const maxZoom = 16;
+        // Estimate appropriate zoom levels
+        let fitZoom = estimateFitZoom(bounds);
+        // Ensure we don't start too zoomed in if the route is tiny (e.g. 18),
+        // allowing at least some context. But for huge routes, fitZoom is low.
+        // Cap minZoom to 15 to ensure context around start/end.
+        let minZoom = Math.min(fitZoom, 15);
+        let maxZoom = 18; // Attempt max detail as requested
 
-        const tiles = getTileUrls(bounds, minZoom, maxZoom, urlTemplate);
+        let tiles = [];
+
+        // Loop to reduce maxZoom if tile count exceeds limit
+        while (true) {
+             tiles = getTileUrls(bounds, minZoom, maxZoom, urlTemplate);
+             if (tiles.length <= TILE_LIMIT || maxZoom <= minZoom) {
+                 break;
+             }
+             console.warn(`Too many tiles (${tiles.length}) for z${minZoom}-z${maxZoom}. Reducing maxZoom to ${maxZoom - 1}.`);
+             maxZoom--;
+        }
+
         console.log(`Calculated ${tiles.length} tiles for zoom ${minZoom}-${maxZoom}`);
 
         if (tiles.length === 0) {
