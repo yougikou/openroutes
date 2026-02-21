@@ -8,6 +8,7 @@ const buildSW = () => {
       '**/*.{png,jpg,jpeg,svg,ico}'
     ],
     swDest: 'dist/sw.js',
+    importScripts: ['map-tile-sw.js'],
     // Increase the limit to cache large bundles
     maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
     // Handle SPA navigation fallback
