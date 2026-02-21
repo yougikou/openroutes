@@ -39,6 +39,39 @@ const buildSW = () => {
           },
         },
       },
+      {
+        urlPattern: /^https:\/\/raw\.githubusercontent\.com/,
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'github-raw-content',
+          expiration: {
+            maxEntries: 50,
+            maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+          },
+        },
+      },
+      {
+        urlPattern: /^https:\/\/github\.com\/.*\/releases\/download\/.*/,
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'github-releases',
+          expiration: {
+            maxEntries: 50,
+            maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+          },
+        },
+      },
+      {
+        urlPattern: /^https:\/\/objects\.githubusercontent\.com/,
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'github-objects',
+          expiration: {
+            maxEntries: 50,
+            maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+          },
+        },
+      },
     ],
   });
 };
