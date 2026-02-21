@@ -9,7 +9,7 @@ const buildSW = () => {
       '**/*.{ttf,woff,woff2,otf}'
     ],
     swDest: 'dist/sw.js',
-    importScripts: ['map-tile-sw.js'],
+    importScripts: ['sw-custom.js', 'map-tile-sw.js'],
     // Increase the limit to cache large bundles
     maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
     // Handle SPA navigation fallback
