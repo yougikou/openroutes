@@ -27,7 +27,7 @@ if (Platform.OS === 'web') {
       Marker = ReactLeaflet.Marker;
       useMap = ReactLeaflet.useMap;
       L = require('leaflet');
-      require('leaflet.offline');
+      // leaflet.offline removed in favor of Service Worker + Cache API
     } catch (e) {
       console.warn("Failed to load Leaflet modules", e);
     }
@@ -178,36 +178,6 @@ const FitBounds = ({ data }: { data: any }) => {
       }
     }
   }, [data, map]);
-  return null;
-};
-
-const OfflineTileLayer = () => {
-  const map = useMap();
-  useEffect(() => {
-    if (!L || !map) return;
-
-    // Check if L.tileLayer.offline is available
-    if (L.tileLayer && L.tileLayer.offline) {
-        const urlTemplate = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-        const tileLayer = L.tileLayer.offline(urlTemplate, {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          subdomains: 'abc',
-        });
-        tileLayer.addTo(map);
-        return () => {
-          map.removeLayer(tileLayer);
-        };
-    } else {
-        // Fallback to standard tile layer if offline plugin not loaded
-        const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        });
-        tileLayer.addTo(map);
-        return () => {
-          map.removeLayer(tileLayer);
-        };
-    }
-  }, [map]);
   return null;
 };
 
@@ -477,7 +447,11 @@ const MapScreen: React.FC<MapScreenProps> = ({ url, title, source, standalone })
             zoomControl={false}
             ref={setMapInstance}
           >
-            <OfflineTileLayer />
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              crossOrigin="anonymous"
+            />
 
             {geoJsonData && <GeoJSON key={url} data={geoJsonData} style={{ color: theme.colors.primary, weight: 4 }} />}
             {geoJsonData && <FitBounds data={geoJsonData} />}
