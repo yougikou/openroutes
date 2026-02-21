@@ -176,27 +176,19 @@ export const saveOfflineMap = async (
 
         // 5. Download and Save to Cache Storage
         // We do this sequentially to avoid browser network saturation.
-        let cache: any = null;
-        if ('caches' in window) {
-            cache = await caches.open(CACHE_NAME);
-        }
+        // Note: The Service Worker (map-tile-sw.js) intercepts these requests.
+        // By using cache: 'reload', we force the SW to fetch from network and update the cache.
+        // We don't need to manually cache.put here because the SW handles it.
 
         for (const tile of tiles) {
              try {
-                 const res = await fetch(tile.url);
+                 // Use cache: 'reload' to bypass SW cache lookup and force update
+                 const req = new Request(tile.url, { mode: 'cors', cache: 'reload' });
+                 const res = await fetch(req);
                  if (res.ok) {
                     const blob = await res.blob();
                     if (blob.size) {
                         totalSize += blob.size;
-                    }
-
-                    if (cache) {
-                         const responseToCache = new Response(blob, {
-                             status: 200,
-                             statusText: 'OK',
-                             headers: { 'Content-Type': 'image/png' }
-                         });
-                         await cache.put(tile.url, responseToCache);
                     }
                  }
              } catch (e) {

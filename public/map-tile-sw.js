@@ -30,9 +30,16 @@ self.addEventListener('fetch', event => {
     };
 
     event.respondWith(
-      caches.match(event.request, {
-        ignoreSearch: true // Ignore URL params
-      }).then(cachedResponse => {
+      (async () => {
+        // If the request explicitly asks to reload (e.g. during save), bypass cache lookup
+        if (event.request.cache === 'reload' || event.request.cache === 'no-cache') {
+          return fetchFromNetwork();
+        }
+
+        const cachedResponse = await caches.match(event.request, {
+          ignoreSearch: true // Ignore URL params
+        });
+
         if (cachedResponse) {
           return cachedResponse; // Cache hit
         }
@@ -51,7 +58,7 @@ self.addEventListener('fetch', event => {
         }
 
         return fetchFromNetwork();
-      })
+      })()
     );
   }
 });
