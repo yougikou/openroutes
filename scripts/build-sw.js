@@ -30,6 +30,17 @@ const buildSW = () => {
     // Add runtime caching for external resources if needed
     runtimeCaching: [
       {
+        urlPattern: /^https:\/\/unpkg\.com/,
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'unpkg-libraries',
+          expiration: {
+            maxEntries: 20,
+            maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+          },
+        },
+      },
+      {
         urlPattern: /^https:\/\/fonts\.googleapis\.com/,
         handler: 'StaleWhileRevalidate',
         options: {

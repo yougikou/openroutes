@@ -14,10 +14,17 @@ self.addEventListener('fetch', event => {
           // Clone the response
           const responseToCache = networkResponse.clone();
 
-          caches.open(CACHE_NAME)
+          const cacheUpdate = caches.open(CACHE_NAME)
             .then(cache => {
-              cache.put(event.request, responseToCache);
+              return cache.put(event.request, responseToCache);
+            })
+            .catch(err => {
+               console.warn('Failed to cache tile:', err);
             });
+
+          if (event.waitUntil) {
+            event.waitUntil(cacheUpdate);
+          }
 
           return networkResponse;
         }).catch(() => {
