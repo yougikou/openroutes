@@ -230,6 +230,30 @@ const WorldMapScreen: React.FC = () => {
     time: { min: 0, max: Infinity },
   });
 
+  const [isMapReady, setIsMapReady] = useState(Platform.OS !== 'web');
+
+  // Wait for Service Worker to be ready on Web before initializing map
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/openroutes/sw.js', { scope: '/openroutes/' })
+          .then((registration) => {
+            return navigator.serviceWorker.ready;
+          })
+          .then(() => {
+            console.log("Service Worker ready, enabling map.");
+            setIsMapReady(true);
+          })
+          .catch((error) => {
+            console.error("SW registration failed, enabling map anyway.", error);
+            setIsMapReady(true);
+          });
+      } else {
+        setIsMapReady(true);
+      }
+    }
+  }, []);
+
   // Inject Leaflet CSS and MarkerCluster CSS
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -456,7 +480,7 @@ const WorldMapScreen: React.FC = () => {
     );
   }
 
-  if (Platform.OS === 'web' && (!MapContainer || !TileLayer || !MarkerClusterGroup)) {
+  if (Platform.OS === 'web' && (!MapContainer || !TileLayer || !MarkerClusterGroup || !isMapReady)) {
     return (
       <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
         <ActivityIndicator size="large" />
