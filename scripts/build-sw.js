@@ -8,6 +8,13 @@ const buildSW = () => {
       '**/*.{png,jpg,jpeg,svg,ico}',
       '**/*.{ttf,woff,woff2,otf}'
     ],
+    // Explicitly override globIgnores to allow caching assets in node_modules (e.g., expo-vector-icons)
+    globIgnores: [
+      '**/sw.js',
+      '**/sw.js.map',
+      '**/workbox-*.js',
+      '**/workbox-*.js.map'
+    ],
     swDest: 'dist/sw.js',
     importScripts: ['sw-custom.js', 'map-tile-sw.js'],
     // Increase the limit to cache large bundles
