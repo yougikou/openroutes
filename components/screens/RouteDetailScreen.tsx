@@ -78,6 +78,15 @@ export default function RouteDetailScreen() {
       );
   }
 
+  const getLabelIcon = (labelName: string) => {
+    switch (labelName.toLowerCase()) {
+      case 'hiking': return 'hiking';
+      case 'cycling': return 'bike';
+      case 'walking': return 'walk';
+      default: return undefined;
+    }
+  };
+
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebPage",
@@ -131,21 +140,19 @@ export default function RouteDetailScreen() {
 
             <Surface style={[styles.statsContainer, { backgroundColor: theme.colors.surfaceVariant }]} elevation={0}>
                  <View style={styles.statItem}>
-                    <MaterialCommunityIcons name="map-marker-distance" size={24} color={theme.colors.primary} />
-                    <Text variant="titleMedium" style={{fontWeight: 'bold', marginTop: 4}}>{routeItem.distance ? `${routeItem.distance} km` : '--'}</Text>
-                    <Text variant="labelSmall">Distance</Text>
+                    <MaterialCommunityIcons name="map-marker-distance" size={20} color={theme.colors.primary} />
+                    <Text variant="titleMedium" style={{fontWeight: 'bold', marginLeft: 8}}>{routeItem.distance ? `${routeItem.distance} km` : '--'}</Text>
                  </View>
                  <View style={styles.statSeparator} />
                  <View style={styles.statItem}>
-                    <MaterialCommunityIcons name="clock-outline" size={24} color={theme.colors.primary} />
-                    <Text variant="titleMedium" style={{fontWeight: 'bold', marginTop: 4}}>{routeItem.duration ? `${routeItem.duration} h` : '--'}</Text>
-                    <Text variant="labelSmall">Duration</Text>
+                    <MaterialCommunityIcons name="clock-outline" size={20} color={theme.colors.primary} />
+                    <Text variant="titleMedium" style={{fontWeight: 'bold', marginLeft: 8}}>{routeItem.duration ? `${routeItem.duration} h` : '--'}</Text>
                  </View>
             </Surface>
 
             <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 16}}>
                 {routeItem.labels.map(l => (
-                    <Chip key={l.id}>{i18n.t(l.name)}</Chip>
+                    <Chip key={l.id} icon={getLabelIcon(l.name)}>{i18n.t(l.name)}</Chip>
                 ))}
             </View>
 
@@ -224,18 +231,20 @@ export default function RouteDetailScreen() {
 const styles = StyleSheet.create({
     statsContainer: {
         flexDirection: 'row',
-        padding: 16,
+        padding: 12,
         borderRadius: 12,
         justifyContent: 'space-around',
         alignItems: 'center'
     },
     statItem: {
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
         flex: 1
     },
     statSeparator: {
         width: 1,
-        height: 40,
+        height: 24,
         backgroundColor: '#ccc'
     }
 });
