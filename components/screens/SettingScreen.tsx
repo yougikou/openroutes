@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, useWindowDimensions, ScrollView, ActivityIndicator, Linking, Platform } from 'react-native';
-import { Appbar, List, useTheme, Surface, Text, Button, Divider, Avatar, Banner } from 'react-native-paper';
+import { Appbar, List, useTheme, Surface, Text, Button, Divider, Avatar, Banner, Portal, Dialog, Paragraph } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import i18n from '../i18n/i18n';
 import { readData, deleteData } from '../apis/StorageAPI';
@@ -22,6 +22,7 @@ const SettingScreen = (): React.ReactElement => {
   const [githubToken, setGithubToken] = useState<string | null>(null);
   const [isExchanging, setIsExchanging] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isDisclaimerVisible, setIsDisclaimerVisible] = useState(false);
 
   const handleConnect = () => {
     // Self-contained Auth Flow:
@@ -172,6 +173,19 @@ const SettingScreen = (): React.ReactElement => {
             </List.Accordion>
           </Surface>
 
+          {/* Disclaimer Section */}
+          <View style={[styles.sectionTitleContainer, { marginTop: 24 }]}>
+            <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>
+              {i18n.t('disclaimer_title')}
+            </Text>
+          </View>
+          <Surface style={[styles.card, { backgroundColor: theme.colors.surface, padding: 16 }]} elevation={1}>
+             <Text variant="bodyMedium" style={{ marginBottom: 8 }}>{i18n.t('disclaimer_summary')}</Text>
+             <Button mode="text" onPress={() => setIsDisclaimerVisible(true)} style={{ alignSelf: 'flex-start', marginLeft: -8 }}>
+               {i18n.t('disclaimer_detail_btn')}
+             </Button>
+          </Surface>
+
           {/* App Info Section (Example) */}
           <View style={[styles.sectionTitleContainer, { marginTop: 24 }]}>
             <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>
@@ -195,6 +209,22 @@ const SettingScreen = (): React.ReactElement => {
 
         </View>
       </ScrollView>
+
+      <Portal>
+        <Dialog visible={isDisclaimerVisible} onDismiss={() => setIsDisclaimerVisible(false)} style={{ maxHeight: '80%' }}>
+          <Dialog.Title>{i18n.t('disclaimer_title')}</Dialog.Title>
+          <Dialog.ScrollArea>
+            <ScrollView contentContainerStyle={{ paddingHorizontal: 0 }}>
+              <Paragraph>
+                {i18n.t('disclaimer_full_text')}
+              </Paragraph>
+            </ScrollView>
+          </Dialog.ScrollArea>
+          <Dialog.Actions>
+            <Button onPress={() => setIsDisclaimerVisible(false)}>{i18n.t('confirm')}</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </View>
   );
 };
