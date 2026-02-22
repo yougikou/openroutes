@@ -203,7 +203,7 @@ export default function RouteDetailScreen() {
             <Dialog.Title>{i18n.t('offline_downloading')}</Dialog.Title>
             <Dialog.Content>
                  <ProgressBar progress={progress} />
-                 <Text style={{marginTop: 10, textAlign: 'center'}}>{Math.round(progress * 100)}%</Text>
+                 <Text style={{marginTop: 10, marginBottom: 10, textAlign: 'center'}}>{Math.round(progress * 100)}%</Text>
             </Dialog.Content>
         </Dialog>
 

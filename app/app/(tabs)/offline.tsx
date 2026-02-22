@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, FlatList, StyleSheet, Platform, RefreshControl } from 'react-native';
-import { Appbar, List, IconButton, Text, useTheme, Divider, Button } from 'react-native-paper';
+import { Appbar, List, IconButton, Text, useTheme, Divider, Button, Portal, Dialog } from 'react-native-paper';
 import { useRouter, useFocusEffect } from 'expo-router';
 import i18n from '../../../components/i18n/i18n';
 import { getOfflineMaps, deleteOfflineMap, OfflineMap } from '../../../utils/offlineMapUtils';
@@ -10,6 +10,8 @@ export default function OfflineMapsScreen() {
   const router = useRouter();
   const [maps, setMaps] = useState<OfflineMap[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleteVisible, setDeleteVisible] = useState(false);
+  const [mapToDelete, setMapToDelete] = useState<number | null>(null);
 
   const loadMaps = async () => {
     setLoading(true);
@@ -31,10 +33,18 @@ export default function OfflineMapsScreen() {
     }, [])
   );
 
-  const handleDelete = async (id: number) => {
-    // Confirm dialog? For now just delete.
-    await deleteOfflineMap(id);
-    loadMaps();
+  const handleDeleteRequest = (id: number) => {
+    setMapToDelete(id);
+    setDeleteVisible(true);
+  };
+
+  const executeDelete = async () => {
+    if (mapToDelete !== null) {
+      await deleteOfflineMap(mapToDelete);
+      setMapToDelete(null);
+      setDeleteVisible(false);
+      loadMaps();
+    }
   };
 
   const handleView = (item: OfflineMap) => {
@@ -66,7 +76,7 @@ export default function OfflineMapsScreen() {
       right={props => (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Button onPress={() => handleView(item)} mode="text">{i18n.t('view_in_map')}</Button>
-            <IconButton icon="delete" onPress={() => handleDelete(item.id)} iconColor={theme.colors.error} />
+            <IconButton icon="delete" onPress={() => handleDeleteRequest(item.id)} iconColor={theme.colors.error} />
         </View>
       )}
     />
@@ -99,6 +109,19 @@ export default function OfflineMapsScreen() {
             refreshControl={<RefreshControl refreshing={loading} onRefresh={loadMaps} />}
           />
       )}
+
+      <Portal>
+        <Dialog visible={deleteVisible} onDismiss={() => setDeleteVisible(false)}>
+          <Dialog.Title>{i18n.t('offline_delete_title')}</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium">{i18n.t('offline_delete_message')}</Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setDeleteVisible(false)}>{i18n.t('cancel')}</Button>
+            <Button onPress={executeDelete} textColor={theme.colors.error}>{i18n.t('offline_delete')}</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </View>
   );
 }
