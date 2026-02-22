@@ -200,10 +200,12 @@ export default function RouteDetailScreen() {
         </Dialog>
 
         <Dialog visible={downloading} dismissable={false}>
-            <Dialog.Title>{i18n.t('offline_downloading')}</Dialog.Title>
             <Dialog.Content>
+                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                     <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>{i18n.t('offline_downloading')}</Text>
+                     <Text variant="bodyMedium">{Math.round(progress * 100)}%</Text>
+                 </View>
                  <ProgressBar progress={progress} />
-                 <Text style={{marginTop: 10, marginBottom: 30, textAlign: 'center'}}>{Math.round(progress * 100)}%</Text>
             </Dialog.Content>
         </Dialog>
 
