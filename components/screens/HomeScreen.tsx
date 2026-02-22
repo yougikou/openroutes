@@ -49,6 +49,8 @@ const HomeScreen = (): React.ReactElement => {
   const [snackbar, setSnackbar] = useState<SnackbarState>(INITIAL_SNACKBAR_STATE);
   const listRef = useRef<FlashList<RouteIssue>>(null);
   const isNavigating = useRef(false);
+  const hasScrolled = useRef(false);
+  const restoreTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Determine if we are restoring from cache to prevent animation re-run
   const isRestored = useRef(getRouteCache().issues.length > 0);
@@ -141,13 +143,16 @@ const HomeScreen = (): React.ReactElement => {
   useFocusEffect(
     useCallback(() => {
       isNavigating.current = false;
+      hasScrolled.current = false;
 
       // Attempt to restore scroll position when screen is focused (handles back navigation without unmount)
       const cache = getRouteCache();
       if (cache.issues.length > 0 && cache.scrollOffset > 0 && listRef.current) {
         if (Platform.OS === 'web') {
-           setTimeout(() => {
-             listRef.current?.scrollToOffset({ offset: cache.scrollOffset, animated: false });
+           restoreTimeoutRef.current = setTimeout(() => {
+             if (!hasScrolled.current) {
+               listRef.current?.scrollToOffset({ offset: cache.scrollOffset, animated: false });
+             }
            }, 100);
         } else {
            // For native, usually not needed if view stays mounted, but safe to ensure
@@ -165,12 +170,16 @@ const HomeScreen = (): React.ReactElement => {
       // Restore scroll position precisely if needed
       if (cache.scrollOffset > 0 && listRef.current) {
         if (Platform.OS === 'web') {
-          setTimeout(() => {
-            listRef.current?.scrollToOffset({ offset: cache.scrollOffset, animated: false });
+          restoreTimeoutRef.current = setTimeout(() => {
+            if (!hasScrolled.current) {
+              listRef.current?.scrollToOffset({ offset: cache.scrollOffset, animated: false });
+            }
           }, 100);
         } else {
           requestAnimationFrame(() => {
-            listRef.current?.scrollToOffset({ offset: cache.scrollOffset, animated: false });
+            if (!hasScrolled.current) {
+              listRef.current?.scrollToOffset({ offset: cache.scrollOffset, animated: false });
+            }
           });
         }
       }
@@ -233,6 +242,13 @@ const HomeScreen = (): React.ReactElement => {
 
   const handleScroll = useCallback((event: any) => {
     if (isNavigating.current) return;
+
+    if (restoreTimeoutRef.current) {
+      clearTimeout(restoreTimeoutRef.current);
+      restoreTimeoutRef.current = null;
+    }
+    hasScrolled.current = true;
+
     const offset = event.nativeEvent.contentOffset.y;
     updateRouteCache({ scrollOffset: offset });
   }, []);
@@ -291,7 +307,6 @@ const HomeScreen = (): React.ReactElement => {
         ) : (
           <FlashList<RouteIssue>
             ref={listRef}
-            key={numColumns} // Force re-render when columns change
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderItem}
             data={issues}
