@@ -6,6 +6,82 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
+          139.824118,
+          35.166807,
+          6.923407251946628
+        ]
+      },
+      "properties": {
+        "id": 147,
+        "title": "鋸山一周コース",
+        "distance_km": 6.2,
+        "duration_hour": 3.5,
+        "type": "hiking",
+        "difficulty": "normal"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          140.1005007429634,
+          36.21492780779604,
+          294.5
+        ]
+      },
+      "properties": {
+        "id": 146,
+        "title": "筑波山ハイキング",
+        "distance_km": "10.1",
+        "duration_hour": "5.6",
+        "type": "hiking",
+        "difficulty": "normal"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.8257611678735,
+          35.16572279628389,
+          -1.1
+        ]
+      },
+      "properties": {
+        "id": 145,
+        "title": "鋸山の山歩き",
+        "distance_km": 5.3,
+        "duration_hour": 3.4,
+        "type": "hiking",
+        "difficulty": "easy"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.8414170842341,
+          35.6857071115925,
+          -0.4
+        ]
+      },
+      "properties": {
+        "id": 144,
+        "title": "江東区仙台堀川公園散策",
+        "distance_km": 6.2,
+        "duration_hour": 1.4,
+        "type": "walking",
+        "difficulty": "easy"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
           140.1864297882263,
           36.35149808241677,
           47.1
