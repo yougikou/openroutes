@@ -437,7 +437,10 @@ const WorldMapScreen: React.FC = () => {
 
   const routeMap = React.useMemo(() => {
       if (!geoData) return new Map();
-      return new Map(geoData.features.map((f: any) => [f.properties.id.toString(), f.properties]));
+      return new Map(geoData.features.map((f: any) => [
+          f.properties.id.toString(),
+          { ...f.properties, geometry: f.geometry }
+      ]));
   }, [geoData]);
 
   const filteredRoutes = React.useMemo(() => {
