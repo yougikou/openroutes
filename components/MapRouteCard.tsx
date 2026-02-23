@@ -153,12 +153,20 @@ export default function MapRouteCard({ routes, onClose }: MapRouteCardProps) {
         </View>
 
         <View style={styles.rightButtons}>
-          <Button mode="outlined" onPress={handleNavigation} style={styles.navButton} compact>
-            {i18n.t('navigation')}
-          </Button>
-          <Button mode="contained" onPress={handleDetail} style={styles.detailButton} compact>
-            {i18n.t('view_details')}
-          </Button>
+          <IconButton
+            icon="navigation"
+            size={24}
+            iconColor={theme.colors.primary}
+            onPress={handleNavigation}
+            style={styles.actionIcon}
+          />
+          <IconButton
+            icon="arrow-right"
+            size={24}
+            iconColor={theme.colors.primary}
+            onPress={handleDetail}
+            style={styles.actionIcon}
+          />
         </View>
       </View>
     </Surface>
@@ -255,11 +263,10 @@ const styles = StyleSheet.create({
   rightButtons: {
     flexDirection: 'row',
     marginLeft: 'auto',
+    alignItems: 'center',
   },
-  navButton: {
-    marginRight: 8,
-  },
-  detailButton: {
-    // marginLeft: 'auto', // Removed as it is now inside rightButtons
+  actionIcon: {
+    margin: 0,
+    marginLeft: 8,
   }
 });
