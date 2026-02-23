@@ -125,7 +125,14 @@ const HomeScreen = (): React.ReactElement => {
       const issuesData = await fetchIssues(pageRef.current, PER_PAGE, FILTERS, token, searchQuery);
       if (issuesData.length > 0) {
         setIssues((prevIssues) => {
-          const newIssues = [...prevIssues, ...issuesData];
+          const existingIds = new Set(prevIssues.map((i) => i.id));
+          const uniqueIssues = issuesData.filter((i) => !existingIds.has(i.id));
+
+          if (uniqueIssues.length === 0) {
+            return prevIssues;
+          }
+
+          const newIssues = [...prevIssues, ...uniqueIssues];
           updateRouteCache({ issues: newIssues });
           return newIssues;
         });
@@ -270,6 +277,15 @@ const HomeScreen = (): React.ReactElement => {
     [downloadGpxFile, downloadKmlFile, handleToDetail, handleMapPress],
   );
 
+  const renderFooter = useCallback(() => {
+    if (!isLoading || issues.length === 0) return null;
+    return (
+      <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+        <ActivityIndicator animating={true} color={theme.colors.primary} />
+      </View>
+    );
+  }, [isLoading, issues.length, theme.colors.primary]);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Redirector />
@@ -316,6 +332,7 @@ const HomeScreen = (): React.ReactElement => {
             onEndReachedThreshold={0.5}
             contentContainerStyle={styles.listContent}
             estimatedItemSize={350}
+            ListFooterComponent={renderFooter}
             showsVerticalScrollIndicator={Platform.OS === 'web'} // Better scroll experience on web
             onScroll={handleScroll}
             scrollEventThrottle={16}
