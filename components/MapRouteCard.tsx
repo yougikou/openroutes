@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Platform, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, Platform, useWindowDimensions, Linking } from 'react-native';
 import { Surface, Text, Button, IconButton, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -57,6 +57,13 @@ export default function MapRouteCard({ routes, onClose }: MapRouteCardProps) {
           pathname: '/app/detail',
           params: { id: current.id.toString() }
       });
+  };
+
+  const handleNavigation = () => {
+      if (!current.geometry || !current.geometry.coordinates) return;
+      const [lng, lat] = current.geometry.coordinates;
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+      Linking.openURL(url);
   };
 
   const getTypeIcon = (type: string | undefined) => {
@@ -145,9 +152,22 @@ export default function MapRouteCard({ routes, onClose }: MapRouteCardProps) {
              )}
         </View>
 
-        <Button mode="contained" onPress={handleDetail} style={styles.detailButton} compact>
-          {i18n.t('view_details')}
-        </Button>
+        <View style={styles.rightButtons}>
+          <IconButton
+            icon="navigation"
+            size={24}
+            iconColor={theme.colors.primary}
+            onPress={handleNavigation}
+            style={styles.actionIcon}
+          />
+          <IconButton
+            icon="arrow-right"
+            size={24}
+            iconColor={theme.colors.primary}
+            onPress={handleDetail}
+            style={styles.actionIcon}
+          />
+        </View>
       </View>
     </Surface>
   );
@@ -240,7 +260,13 @@ const styles = StyleSheet.create({
   navButtons: {
     flexDirection: 'row',
   },
-  detailButton: {
+  rightButtons: {
+    flexDirection: 'row',
     marginLeft: 'auto',
+    alignItems: 'center',
+  },
+  actionIcon: {
+    margin: 0,
+    marginLeft: 8,
   }
 });
