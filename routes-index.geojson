@@ -6,6 +6,44 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
+          139.096207,
+          34.905392,
+          562.451111
+        ]
+      },
+      "properties": {
+        "id": 149,
+        "title": "20261012大室山山顶步行",
+        "distance_km": 1.2,
+        "duration_hour": 0.5,
+        "type": "hiking",
+        "difficulty": "easy"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          137.620462,
+          36.229437,
+          1495.15035
+        ]
+      },
+      "properties": {
+        "id": 148,
+        "title": "20260720上高地公園徒歩",
+        "distance_km": 5,
+        "duration_hour": 1.8,
+        "type": "hiking",
+        "difficulty": "easy"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
           139.824118,
           35.166807,
           6.923407251946628
